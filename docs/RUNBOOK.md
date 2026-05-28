@@ -13,7 +13,7 @@ node --version
 adb --version
 
 # Clone & install
-git clone https://github.com/OWNER/GarageTrack.git
+git clone https://github.com/Jo0ji1/GarageTrack.git
 cd GarageTrack\garage-track-mobile
 npm install --legacy-peer-deps
 ```

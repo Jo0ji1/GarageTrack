@@ -2,7 +2,7 @@
 
 > Gestão pessoal de manutenção veicular, offline-first, com biometria e backup criptografado.
 
-[![CI](https://github.com/OWNER/GarageTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/OWNER/GarageTrack/actions/workflows/ci.yml)
+[![CI](https://github.com/Jo0ji1/GarageTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Jo0ji1/GarageTrack/actions/workflows/ci.yml)
 [![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](garage-track-mobile/LICENSE)
 [![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://expo.dev)
 [![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
@@ -29,7 +29,7 @@ App mobile (Android, em breve iOS) para acompanhar manutenção de carros e moto
 ### Rodar localmente
 
 ```powershell
-git clone https://github.com/OWNER/GarageTrack.git
+git clone https://github.com/Jo0ji1/GarageTrack.git
 cd GarageTrack/garage-track-mobile
 npm install --legacy-peer-deps
 npm run dev:android

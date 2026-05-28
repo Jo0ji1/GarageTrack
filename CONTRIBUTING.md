@@ -5,7 +5,7 @@ Obrigado pelo interesse! Este projeto é mantido como um trabalho acadêmico ope
 ## Setup rápido
 
 ```powershell
-git clone https://github.com/<seu-user>/GarageTrack.git
+git clone https://github.com/Jo0ji1/GarageTrack.git
 cd GarageTrack/garage-track-mobile
 npm install --legacy-peer-deps
 npm run dev:android   # Windows: sobe Metro + adb reverse + Expo Go
