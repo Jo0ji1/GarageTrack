@@ -1,0 +1,86 @@
+{
+  "expo": {
+    "name": "GarageTrack",
+    "slug": "garage-track-mobile",
+    "version": "1.0.0",
+    "scheme": "garagetrack",
+    "orientation": "portrait",
+    "icon": "./assets/icon.png",
+    "userInterfaceStyle": "automatic",
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.garagetrack.app"
+    },
+    "android": {
+      "package": "com.garagetrack.app",
+      "allowBackup": false,
+      "adaptiveIcon": {
+        "backgroundColor": "#E6F4FE",
+        "foregroundImage": "./assets/android-icon-foreground.png",
+        "backgroundImage": "./assets/android-icon-background.png",
+        "monochromeImage": "./assets/android-icon-monochrome.png"
+      },
+      "predictiveBackGestureEnabled": false,
+      "config": {
+        "googleMaps": {
+          "apiKey": "AIzaSyDcIHijPiKgbGkIu4H9BZzWH3VMfIMkT0A"
+        }
+      },
+      "permissions": [
+        "android.permission.ACCESS_COARSE_LOCATION",
+        "android.permission.ACCESS_FINE_LOCATION",
+        "android.permission.RECORD_AUDIO",
+        "android.permission.MODIFY_AUDIO_SETTINGS"
+      ]
+    },
+    "web": {
+      "favicon": "./assets/favicon.png"
+    },
+    "plugins": [
+      [
+        "expo-sqlite",
+        {
+          "enableFTS": true,
+          "useSQLCipher": false
+        }
+      ],
+      [
+        "expo-location",
+        {
+          "locationWhenInUsePermission": "O GarageTrack usa sua localizacao para registrar onde o servico foi realizado e encontrar oficinas proximas."
+        }
+      ],
+      [
+        "expo-image-picker",
+        {
+          "photosPermission": "O GarageTrack acessa suas fotos para anexar evidencias de manutencao.",
+          "cameraPermission": "O GarageTrack usa a camera para fotografar veiculos, pecas e problemas mecanicos.",
+          "microphonePermission": false
+        }
+      ],
+      [
+        "expo-audio",
+        {
+          "microphonePermission": "O GarageTrack usa o microfone para gravar descricoes de problemas mecanicos.",
+          "recordAudioAndroid": true,
+          "enableBackgroundRecording": false,
+          "enableBackgroundPlayback": false
+        }
+      ],
+      [
+        "expo-notifications",
+        {
+          "color": "#1F6F4A",
+          "defaultChannel": "maintenance"
+        }
+      ],
+      "expo-secure-store",
+      "expo-sharing"
+    ],
+    "extra": {
+      "eas": {
+        "projectId": "c66f16e0-5404-4371-af3e-572b538fbca2"
+      }
+    }
+  }
+}

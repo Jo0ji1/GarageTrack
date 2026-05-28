@@ -1,0 +1,292 @@
+PROJETO FINAL — DESENVOLVIMENTO DE APLICATIVOS PARA DISPOSITIVOS MÓVEIS
+
+ETAPA 1 — MODELAGEM DE ENGENHARIA DE SOFTWARE
+
+Nome do aplicativo: GarageTrack
+Alunos: Lucas Vítor e George Carlos
+Contexto de aplicação: Manutenção automotiva inteligente para carros e motos
+Tecnologias obrigatórias integradas: Banco de Dados (SQLite), GPS (Geolocalização) e Mídia (Câmera, Galeria e Áudio)
+
+
+RESUMO DO PROJETO
+
+O GarageTrack é um aplicativo mobile voltado a motoristas e motociclistas que desejam organizar a manutenção do veículo de forma prática, segura e preventiva. O aplicativo combina banco de dados local, GPS e recursos multimídia para resolver um problema real e recorrente: a perda de histórico técnico do veículo, que gera custos evitáveis, insegurança em viagens e perda de valor na revenda.
+
+O usuário pode cadastrar veículos, registrar manutenções com data, quilometragem, custo, oficina, foto, áudio e localização, consultar histórico filtrável, visualizar oficinas próximas em um mapa, avaliar oficinas e receber lembretes preventivos. O sistema calcula a próxima revisão pelo critério que vencer primeiro entre tempo e quilometragem, oferecendo também um modo pré-viagem que cruza a distância planejada com o estado atual do veículo.
+
+
+1. LEVANTAMENTO DE REQUISITOS
+
+1.1 Requisitos Funcionais
+
+RF01 — O sistema deve permitir cadastro e login do usuário, mantendo perfil persistente no dispositivo. (Prioridade: Alta)
+RF02 — O usuário deve poder cadastrar e gerenciar um ou mais veículos (carro ou moto) com placa, marca, modelo, ano e quilometragem atual. (Prioridade: Alta)
+RF03 — O sistema deve registrar manutenções com data, categoria, quilometragem, custo, oficina e observações técnicas. (Prioridade: Alta)
+RF04 — O sistema deve armazenar e exibir o histórico de manutenção por veículo, com filtro por categoria. (Prioridade: Alta)
+RF05 — O aplicativo deve permitir anexar fotos do veículo, peça ou problema, capturadas pela câmera ou pela galeria. (Prioridade: Alta)
+RF06 — O aplicativo deve permitir gravar áudio descrevendo problemas mecânicos e anexá-lo ao registro. (Prioridade: Alta)
+RF07 — O sistema deve registrar a localização GPS do serviço realizado e da oficina. (Prioridade: Alta)
+RF08 — O aplicativo deve exibir oficinas próximas e manutenções anteriores em um mapa interativo. (Prioridade: Alta)
+RF09 — O usuário deve poder consultar os serviços oferecidos por cada oficina. (Prioridade: Média)
+RF10 — O usuário deve poder avaliar oficinas com nota e comentário. (Prioridade: Média)
+RF11 — O sistema deve calcular a próxima revisão por tempo, por quilometragem ou pelo critério que vencer primeiro. (Prioridade: Alta)
+RF12 — O sistema deve enviar lembretes de manutenção preventiva por meio de notificações locais. (Prioridade: Alta)
+RF13 — O aplicativo deve oferecer um modo pré-viagem que avalia o risco em função da distância planejada. (Prioridade: Média)
+RF14 — O usuário deve poder configurar intervalos e antecedência de alerta por categoria e por veículo. (Prioridade: Média)
+
+1.2 Requisitos Não Funcionais
+
+RNF01 — Usabilidade: a interface deve ser intuitiva e seguir um padrão visual consistente. Critério: fluxos principais acessíveis em até três toques a partir da Home.
+RNF02 — Desempenho: as consultas ao histórico e a abertura do dashboard devem ocorrer rapidamente. Critério: tempo de resposta inferior a 2 segundos para conjuntos de até 1.000 registros.
+RNF03 — Disponibilidade: os fluxos principais devem funcionar offline. Critério: registrar manutenção, consultar histórico e ver saúde funcionam sem internet.
+RNF04 — Portabilidade: o aplicativo deve funcionar em dispositivos Android. Critério: executar em Android 10 ou superior, em dispositivo físico ou emulador.
+RNF05 — Segurança: os dados do usuário devem ser armazenados de forma segura. Critério: dados sensíveis não são impressos em logs e ficam restritos ao banco local.
+RNF06 — Atualização: a localização deve refletir a posição atual do usuário ao buscar oficinas. Critério: captura de GPS é feita sob demanda no momento do registro ou da busca.
+RNF07 — Acessibilidade: o status do veículo deve ser representado por texto, além de cor. Critério: cada categoria exibe rótulo OK/Atenção/Vencido independente da cor.
+RNF08 — Manutenibilidade: as regras de negócio devem ficar separadas da interface. Critério: cálculos podem ser testados sem montar telas.
+
+
+2. DIAGRAMA DE CASOS DE USO
+
+2.1 Atores
+
+• Usuário (Motorista/Motociclista): ator principal que interage com o aplicativo para gerenciar veículos, registrar manutenções e consultar histórico.
+• Oficina: ator secundário que disponibiliza serviços e recebe avaliações dentro do sistema.
+• Serviço de Localização (GPS): ator de sistema que fornece coordenadas geográficas.
+• Serviço de Notificação: ator de sistema que entrega lembretes locais.
+
+2.2 Casos de Uso Identificados
+
+Casos de uso do ator Usuário:
+• UC01 — Realizar login/cadastro
+• UC02 — Cadastrar veículo
+• UC03 — Registrar manutenção
+• UC04 — Consultar histórico
+• UC05 — Buscar oficinas próximas
+• UC06 — Visualizar mapa de oficinas e serviços
+• UC07 — Consultar serviços da oficina
+• UC08 — Avaliar oficina
+• UC09 — Ativar modo pré-viagem
+• UC10 — Configurar alertas de manutenção
+
+Casos de uso auxiliares (acionados por outros casos):
+• UC11 — Anexar foto
+• UC12 — Gravar áudio
+• UC13 — Capturar localização GPS
+• UC14 — Selecionar oficina
+• UC15 — Calcular próxima revisão
+• UC16 — Disparar lembrete preventivo
+
+Casos de uso do ator Oficina:
+• UC17 — Disponibilizar serviços
+• UC18 — Receber avaliações
+
+2.3 Relacionamentos entre Casos de Uso
+
+Relacionamentos do tipo «include» (obrigatórios):
+• UC03 (Registrar manutenção) inclui UC11 (Anexar foto)
+• UC03 (Registrar manutenção) inclui UC12 (Gravar áudio)
+• UC03 (Registrar manutenção) inclui UC13 (Capturar localização GPS)
+• UC03 (Registrar manutenção) inclui UC15 (Calcular próxima revisão)
+• UC05 (Buscar oficinas próximas) inclui UC13 (Capturar localização GPS)
+• UC06 (Visualizar mapa) inclui UC13 (Capturar localização GPS)
+• UC09 (Modo pré-viagem) inclui UC15 (Calcular próxima revisão)
+
+Relacionamentos do tipo «extend» (opcionais):
+• UC14 (Selecionar oficina) estende UC03 (Registrar manutenção)
+• UC16 (Disparar lembrete preventivo) estende UC15 (Calcular próxima revisão)
+
+Comunicação com atores de sistema:
+• UC05, UC06 e UC13 comunicam-se com o ator Serviço de GPS.
+• UC16 comunica-se com o ator Serviço de Notificação.
+
+2.4 Detalhamento dos Casos de Uso Principais
+
+UC03 — Registrar manutenção
+   Ator principal: Usuário
+   Pré-condições: existe um veículo cadastrado.
+   Fluxo principal: o usuário seleciona o veículo, escolhe a categoria, preenche data, quilometragem, custo e observações; opcionalmente seleciona a oficina; anexa foto, áudio e localização; salva o registro.
+   Inclui: UC11 (Anexar foto), UC12 (Gravar áudio), UC13 (Capturar GPS), UC15 (Calcular próxima revisão).
+   Estende: UC14 (Selecionar oficina).
+   Fluxo alternativo: o registro pode ser salvo sem mídia ou sem oficina.
+   Exceção: quilometragem inválida ou custo negativo bloqueiam o salvamento.
+   Pós-condições: histórico e painel de saúde são atualizados.
+
+UC05 — Buscar oficinas próximas
+   Ator principal: Usuário
+   Pré-condições: permissão de localização concedida.
+   Fluxo principal: o usuário abre a tela de mapa; o sistema obtém o GPS atual; lista e plota oficinas próximas.
+   Inclui: UC13 (Capturar GPS).
+   Exceção: sem permissão, o app exibe lista textual com oficinas cadastradas.
+
+UC09 — Ativar modo pré-viagem
+   Ator principal: Usuário
+   Fluxo principal: o usuário informa a distância prevista; o sistema cruza com os vencimentos por data e por quilometragem e indica itens OK, em atenção ou vencidos.
+   Inclui: UC15 (Calcular próxima revisão).
+
+UC15 — Calcular próxima revisão
+   Ator principal: Sistema
+   Fluxo principal: para cada categoria, o sistema recupera o último registro, aplica intervalo em dias e em km, estima vencimento e define status.
+   Estende: UC16 (Disparar lembrete preventivo), quando dentro da antecedência configurada.
+
+
+3. DIAGRAMA DE CLASSES
+
+3.1 Classes do Sistema
+
+Classe Usuario
+   Atributos: idUsuario (String), nome (String), email (String), senha (String).
+   Métodos: cadastrar(), login(), buscarOficinas(localizacao).
+
+Classe Veiculo
+   Atributos: idVeiculo (String), tipo (String), placa (String), marca (String), modelo (String), ano (Int), quilometragemAtual (Int), kmSemanal (Int).
+   Métodos: cadastrarVeiculo(), atualizarQuilometragem().
+
+Classe Manutencao
+   Atributos: idManutencao (String), categoria (String), data (Date), quilometragem (Int), custo (Decimal), observacoes (String).
+   Métodos: calcularProximaRevisao(), adicionarMidia(midia).
+
+Classe Oficina
+   Atributos: idOficina (String), nome (String), endereco (String), latitude (Float), longitude (Float).
+   Métodos: listarServicos(), atualizarDados(), receberAvaliacao(avaliacao).
+
+Classe Servico
+   Atributos: idServico (String), nome (String), descricao (String), precoBase (Decimal).
+
+Classe Historico
+   Atributos: idHistorico (String), data (Date), servico (String), valor (Decimal).
+   Métodos: adicionarHistorico(), visualizarHistorico().
+
+Classe Avaliacao
+   Atributos: idAvaliacao (String), nota (Int), comentario (String), data (Date).
+
+Classe AlertaManutencao
+   Atributos: idAlerta (String), intervaloDias (Int), intervaloKm (Int), antecedenciaDias (Int), antecedenciaKm (Int), ativo (Boolean).
+   Métodos: verificarVencimento().
+
+Classe Midia
+   Atributos: idMidia (String), tipo (String), uri (String), dataCriacao (Date).
+
+Classe Localizacao
+   Atributos: latitude (Float), longitude (Float), enderecoEstimado (String).
+
+3.2 Descrição das Classes
+
+• Usuario: representa o motorista/motociclista, dono dos veículos e autor das manutenções e avaliações.
+• Veiculo: carro ou moto cadastrado, com quilometragem atual e uso semanal.
+• Manutencao: registro técnico de um serviço realizado, com mídia e localização opcionais.
+• Oficina: estabelecimento de serviço com endereço, coordenadas e serviços oferecidos.
+• Servico: serviço específico que uma oficina pode oferecer.
+• Historico: agregação dos registros de manutenção de um veículo, usada para consultas e relatórios.
+• Avaliacao: nota e comentário do usuário sobre uma oficina.
+• AlertaManutencao: regra preventiva por categoria, com intervalos e antecedência.
+• Midia: foto ou áudio anexado ao registro.
+• Localizacao: par de coordenadas com endereço estimado.
+
+3.3 Relacionamentos entre Classes
+
+• Usuario 1 — possui — N Veiculo
+• Veiculo 1 — registra — N Manutencao
+• Veiculo 1 — configura — N AlertaManutencao
+• Veiculo 1 — acumula — 1 Historico
+• Manutencao 0..1 — realizada_em — 1 Oficina
+• Manutencao 1 — contém (composição) — N Midia
+• Manutencao 1 — ocorre_em — 0..1 Localizacao
+• Oficina 1 — oferece — N Servico
+• Oficina 1 — recebe — N Avaliacao
+• Usuario 1 — emite — N Avaliacao
+• Historico 1 — agrupa (agregação) — N Manutencao
+
+
+4. PROTOTIPAGEM RÁPIDA (FIGMA)
+
+Link do protótipo no Figma:
+https://www.figma.com/make/BR0fn3tA5Y7OQ7iAdfOU8Y/CarPipos-Mobile-App-Prototype?t=nl3nWSqsjek9PmBU-0
+
+4.1 Telas-chave
+
+Tela 1 — Splash Screen
+   Objetivo: apresentar a marca e inicializar o banco local.
+   Elementos: logo do app, nome “GarageTrack”, subtítulo “Sua oficina no bolso”, barra de progresso.
+
+Tela 2 — Login / Cadastro
+   Objetivo: identificar o usuário no aplicativo.
+   Elementos: campo e-mail, campo senha, botão “Entrar”, botão “Cadastrar”, link de recuperação.
+
+Tela 3 — Home / Dashboard
+   Objetivo: visão geral do veículo selecionado.
+   Elementos: seletor de veículo, KPIs (quilometragem, total gasto, último serviço, próximo alerta), botões “Buscar Oficinas”, “Histórico” e “Meu Veículo”.
+
+Tela 4 — Mapa de Oficinas
+   Objetivo: localizar oficinas próximas via GPS.
+   Elementos: mapa, marcadores das oficinas, lista lateral, botão “Ver detalhes”.
+
+Tela 5 — Detalhes da Oficina
+   Objetivo: apresentar a oficina escolhida.
+   Elementos: nome, endereço, serviços disponíveis, avaliações, botão “Rota GPS”.
+
+Tela 6 — Histórico de Manutenção
+   Objetivo: consultar serviços realizados.
+   Elementos: filtros por categoria, lista com data, valor e categoria, detalhe do registro.
+
+Tela 7 — Registrar Manutenção / Problema
+   Objetivo: registrar um serviço ou reportar um problema.
+   Elementos: categoria, data, km, custo, oficina, checklist contextual, botões câmera, galeria, áudio e GPS, campo de notas, botão “Salvar”.
+
+Tela 8 — Painel de Saúde
+   Objetivo: indicar o estado por categoria.
+   Elementos: cards por categoria com status OK/Atenção/Vencido e motivo.
+
+Tela 9 — Modo Pré-Viagem
+   Objetivo: avaliar risco antes de viajar.
+   Elementos: campo de distância prevista, banner de status geral, checklist por categoria.
+
+Tela 10 — Alertas / Configurações
+   Objetivo: ajustar regras preventivas.
+   Elementos: switch por categoria, controles de intervalo em dias e km, antecedência.
+
+4.2 Elementos de UI Comuns
+
+• Botões primários com destaque visual e feedback de toque.
+• Campos de texto com rótulo, dica e validação inline.
+• Mapas e marcadores para localização.
+• Cards informativos para KPIs e categorias.
+• Ícones consistentes para categorias de manutenção.
+• Reprodutor de áudio embutido para mídia anexada.
+• Imagens de evidência exibidas em proporção controlada.
+
+4.3 Fluxo de Navegação
+
+Splash Screen → Login/Cadastro → Home/Dashboard
+
+A partir da Home, o usuário acessa:
+   Home → Mapa de Oficinas → Detalhes da Oficina → Avaliar Oficina
+   Home → Mapa de Oficinas → Detalhes da Oficina → Registrar Manutenção
+   Home → Histórico de Manutenção → Detalhe da Manutenção
+   Home → Registrar Manutenção → Histórico de Manutenção
+   Home → Painel de Saúde → Alertas/Configurações
+   Home → Modo Pré-Viagem
+   Home → Alertas/Configurações
+
+4.4 Considerações de UX/UI
+
+• Consistência: mesmo conjunto de cores, tipografia e espaçamento em todas as telas; ações primárias sempre destacadas com botão de cor sólida.
+• Acessibilidade: rótulos textuais junto a indicadores de cor; tamanho mínimo de toque adequado; contraste alto entre texto e fundo.
+• Feedback visual: estados de carregamento ao salvar, indicação clara de gravação de áudio, confirmação após registrar manutenção e mensagens explicativas em caso de erro de permissão.
+• Hierarquia visual: KPIs em destaque na Home, prioridades técnicas evidenciadas no painel de saúde, modo pré-viagem com banner colorido conforme o resultado.
+• Redução de fricção: quilometragem pré-preenchida com o valor atual do veículo; oficinas e categorias sugeridas conforme o tipo do veículo (carro ou moto).
+
+
+5. TECNOLOGIAS OBRIGATÓRIAS DA DISCIPLINA
+
+• Banco de Dados — SQLite local (via Expo SQLite) para usuários, veículos, oficinas, manutenções, mídias, avaliações, alertas e histórico.
+• GPS — Geolocalização (via Expo Location) para registrar o local do serviço, buscar oficinas próximas e plotar marcadores no mapa.
+• Mídia — Câmera e galeria (via Expo Image Picker) para fotos do veículo/problema, e gravação de áudio (via Expo Audio) para descrição mecânica.
+
+
+6. FORMATO DE TRABALHO E ENTREGA
+
+• Modalidade: projeto desenvolvido em dupla (Lucas Vítor e George Carlos).
+• Documento: este arquivo contempla as quatro seções de modelagem exigidas no PDF da disciplina — Requisitos, Casos de Uso, Classes e Prototipagem Rápida.
+• Protótipos: disponíveis no Figma, com telas-chave e indicação do fluxo de navegação entre elas.
+• Próxima etapa: implementação do MVP em React Native (Expo), com banco SQLite, GPS, câmera, áudio e notificações locais já cobertos no escopo definido.
