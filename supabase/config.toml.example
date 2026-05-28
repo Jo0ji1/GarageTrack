@@ -1,0 +1,9 @@
+{
+  "project_id": "REPLACE_WITH_SUPABASE_REF",
+  "api": {
+    "schemas": ["public"]
+  },
+  "db": {
+    "major_version": 15
+  }
+}
