@@ -164,7 +164,7 @@ export const maintenanceCategories: MaintenanceCategoryDefinition[] = [
   {
     id: 'oil',
     label: 'Oleo e filtros',
-    description: 'Troca de oleo, filtro de oleo, filtro de ar e especificacao usada.',
+    description: 'Troca de oleo, filtro de oleo, filtro de ar e especificação usada.',
     appliesTo: ['car', 'motorcycle'],
     defaultIntervalDays: 180,
     defaultIntervalKm: 10000,
@@ -214,7 +214,7 @@ export const maintenanceCategories: MaintenanceCategoryDefinition[] = [
   {
     id: 'inspection',
     label: 'Revisao geral',
-    description: 'Checklist preventivo com itens eletricos, suspensao e seguranca.',
+    description: 'Checklist preventivo com itens elétricos, suspensao e seguranca.',
     appliesTo: ['car', 'motorcycle'],
     defaultIntervalDays: 365,
     defaultIntervalKm: 12000,
@@ -233,8 +233,8 @@ export const maintenanceCategories: MaintenanceCategoryDefinition[] = [
   },
   {
     id: 'general',
-    label: 'Servico avulso',
-    description: 'Servicos corretivos, diagnosticos e observacoes livres.',
+    label: 'Serviço avulso',
+    description: 'Serviços corretivos, diagnósticos e observações livres.',
     appliesTo: ['car', 'motorcycle'],
     defaultIntervalDays: 365,
     defaultIntervalKm: 12000,

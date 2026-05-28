@@ -4,15 +4,29 @@ Todas as mudanças notáveis serão documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
+
+## [1.3.0] — 2026-Q2
 ### Adicionado
-- `eas.json` (profiles dev/preview/production) e script `npm run build:apk`.
-- `scheme: garagetrack` em `app.json` para deep links e OAuth (preparação v1.3).
-- `android.package`, `ios.bundleIdentifier` definidos.
-- `googleMaps.apiKey` placeholder para builds standalone.
-- `android.allowBackup=false` (T5 do threat model).
+- **Sincronização na nuvem (Supabase)**: cliente em `src/services/supabaseClient.ts`, helpers `cloudSync.ts` (signIn/signUp/signOut, pushVehicles, pushRecords, pullVehicles, pullRecords, syncAll) e `CloudContext` global.
+- **Tela "Conta na nuvem"** integrada em `SettingsScreen` (`AccountSection`): login/cadastro por e-mail, status da sessão, "Sincronizar agora", sair.
+- **Migrações Supabase** (`supabase/migrations/*.sql`): tabelas `profiles`, `vehicles`, `maintenance_records`, `attachments` com RLS por `auth.uid()`; trigger `handle_new_user`; policies de storage para bucket `attachments`.
+- **`app.config.js`** substitui `app.json`: lê `EXPO_PUBLIC_*` via `dotenv`; chave do Google Maps fica em `.env` e nunca mais é commitada.
+- `.env.example` documentando todas as variáveis (Maps, Supabase, OAuth).
+- `eas.json` (perfis development/preview/production) e script `npm run build:apk`.
+- `scheme: garagetrack` para deep links e OAuth.
+- `android.package`, `ios.bundleIdentifier` definidos como `com.garagetrack.app`.
+- `android.allowBackup=false` (mitigação T5 do threat model).
 - Documentação completa: `docs/ARCHITECTURE.md`, `docs/SECURITY.md`, `docs/ROADMAP.md`, `docs/RUNBOOK.md`, `docs/SUPABASE.md`.
-- README principal com badges e links de navegação.
-- `CONTRIBUTING.md`, templates de Issue/PR, workflow CI (`typecheck` em PRs).
+- README principal com badges, `CONTRIBUTING.md`, templates de Issue/PR, workflow CI (typecheck em PRs).
+
+### Alterado
+- **Acentuação pt-BR** restaurada em ~90 termos em 8 arquivos: `data/database.ts`, `data/useGarageTrack.ts`, `domain/maintenanceRules.ts`, `domain/models.ts`, `domain/validation.ts`, `presentation/screens/ReportProblemScreen.tsx`, `presentation/GarageTrackApp.tsx`, `services/nativeCapabilities.ts` (Início, Saúde, Manutenção, Localização, serviço, veículo, etc.).
+- Versão do app passa para `1.3.0` em `app.config.js` e rodapé de Configurações.
+
+### Segurança
+- Removida `app.json` do repositório (chave do Google Maps ia plain text). Substituída por `app.config.js` + `.env` (gitignored).
+- ⚠️ **Ação manual obrigatória**: rotacionar a Google Maps Android key no Google Cloud Console — a anterior está no histórico do git (commits `30b433c`, `5568834`, `e540c6d`, `764c736`). Veja [docs/SECURITY.md](docs/SECURITY.md#rotação-de-chaves).
+- `.gitignore` reforçado: `.env*`, `*.apk`, `*.aab`, `*.ipa`, `build/`, `.vscode`, `.idea`, `*.log`.
 
 ### Corrigido
 - Chips de veículos cresciam verticalmente nas telas Registrar/Problema (faltava trava de altura no `ScrollView` horizontal e contenção de overflow no texto).

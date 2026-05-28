@@ -107,7 +107,7 @@ export function calculateHealthItem(
       categoryId,
       categoryLabel: category.label,
       status: 'attention',
-      reason: 'Sem historico registrado; recomenda-se criar uma linha de base.',
+      reason: 'Sem histórico registrado; recomenda-se criar uma linha de base.',
     };
   }
 
@@ -129,8 +129,8 @@ export function calculateHealthItem(
     status === 'overdue'
       ? 'Vencido pelo criterio que chegou primeiro: data estimada ou quilometragem.'
       : status === 'attention'
-        ? 'Dentro da janela de antecedencia configurada para alerta preventivo.'
-        : 'Dentro do intervalo tecnico configurado.';
+        ? 'Dentro da janela de antecedência configurada para alerta preventivo.'
+        : 'Dentro do intervalo técnico configurado.';
 
   return {
     categoryId,
@@ -188,7 +188,7 @@ export function buildPreTripChecklist(
         status === 'overdue'
           ? 'Resolva antes da viagem; ha item vencido por data ou quilometragem.'
           : status === 'attention'
-            ? 'Revisar antes de sair, pois esta proximo do vencimento ou sera consumido pela viagem.'
+            ? 'Revisar antes de sair, pois esta próximo do vencimento ou sera consumido pela viagem.'
             : 'Sem bloqueio preventivo para a distancia informada.',
     };
   });
@@ -201,9 +201,9 @@ export function buildDynamicChecklist(categoryId: MaintenanceCategoryId, vehicle
     tires: ['Medida do pneu', 'DOT', 'Calibragem', 'Alinhamento', 'Balanceamento'],
     battery: ['Tensao em repouso', 'Teste de carga', 'Limpeza dos polos', 'Data de garantia'],
     cooling: ['Fluido aplicado', 'Proporcao aditivo/agua', 'Mangueiras', 'Valvula termostatica', 'Radiador'],
-    inspection: ['Iluminacao', 'Suspensao', 'Direcao', 'Vazamentos', 'Scanner/diagnostico'],
+    inspection: ['Iluminacao', 'Suspensao', 'Direcao', 'Vazamentos', 'Scanner/diagnóstico'],
     chain: ['Folga da corrente', 'Lubrificacao', 'Estado da coroa', 'Estado do pinhao', 'Alinhamento da roda'],
-    general: ['Sintoma observado', 'Diagnostico', 'Peca substituida', 'Garantia do servico'],
+    general: ['Sintoma observado', 'Diagnóstico', 'Peça substituida', 'Garantia do serviço'],
   };
 
   const checklist = shared[categoryId] ?? shared.general;

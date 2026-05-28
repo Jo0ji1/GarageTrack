@@ -41,12 +41,12 @@ export function ReportProblemScreen({ vehicle, workshops, onSubmit }: Readonly<P
     try {
       const result = await captureServicePhoto();
       if (result.error) {
-        Alert.alert('Câmera', result.error);
+        Alert.alert('Camera', result.error);
         return;
       }
       if (result.data) setPhotoUri(result.data);
     } catch (err) {
-      Alert.alert('Câmera', err instanceof Error ? err.message : 'Falha ao capturar.');
+      Alert.alert('Camera', err instanceof Error ? err.message : 'Falha ao capturar.');
     }
   }
 

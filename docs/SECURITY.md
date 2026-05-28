@@ -65,7 +65,38 @@
 
 Abra uma issue com label `security` ou contate os mantenedores em privado. Não divulgue publicamente antes de uma correção estar disponível.
 
-## 7. Checklist pré-release
+## 7. Rotação de chaves
+
+### Google Maps Android (urgente — vazada em v1.2)
+
+A chave `AIzaSy…MkT0A` foi commitada no histórico em `app.json` (commits `30b433c`, `5568834`, `e540c6d`, `764c736`). Apesar das restrições por package + SHA-1 debug, ela deve ser rotacionada.
+
+1. Acesse <https://console.cloud.google.com/google/maps-apis/credentials>.
+2. Selecione a chave atual → **Regenerate key** (ou crie nova e apague a velha).
+3. Em **Application restrictions** → Android apps, confirme:
+   - Package name: `com.garagetrack.app`
+   - SHA-1 fingerprint do keystore release (use `keytool -list -v -keystore release.keystore`).
+4. Em **API restrictions**, mantenha apenas: Maps SDK for Android, Places API (se usada).
+5. Cole a nova chave em `garage-track-mobile/.env` como `EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY=`.
+6. Rebuild com EAS — a chave nunca mais entra no git (o `.env` está em `.gitignore`).
+
+### Supabase anon key
+
+A `anon key` é pública por design (RLS protege os dados). Não precisa rotacionar a menos que mude o projeto ou suspeite de comprometimento. Para rotacionar:
+
+1. Painel Supabase → Settings → API → **Reset anon key**.
+2. Atualize `EXPO_PUBLIC_SUPABASE_ANON_KEY` em `.env` e nos EAS Secrets.
+
+### EAS Secrets (builds em CI)
+
+```powershell
+cd garage-track-mobile
+eas secret:create --scope project --name EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY --value <nova-chave>
+eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_URL --value https://...
+eas secret:create --scope project --name EXPO_PUBLIC_SUPABASE_ANON_KEY --value eyJ...
+```
+
+## 8. Checklist pré-release
 
 - [ ] `android:allowBackup=false` no manifesto
 - [ ] `usesCleartextTraffic=false`

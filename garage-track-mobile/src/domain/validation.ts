@@ -1,13 +1,13 @@
 import type { MaintenanceCategoryId, MaintenanceDraft } from '../domain/models';
 
-export interface ValidationError {
+export interface VálidationError {
   field: string;
   message: string;
 }
 
-export interface DraftValidationResult {
+export interface DraftVálidationResult {
   valid: boolean;
-  errors: ValidationError[];
+  errors: VálidationError[];
   /** Draft normalizado (com valores limpos e canônicos). Só presente se valid. */
   normalized?: MaintenanceDraft;
 }
@@ -16,11 +16,11 @@ const NON_NEGATIVE_INT = /^\d+$/;
 const ISO_DATE = /^\d{4}-\d{2}-\d{2}$/;
 
 /**
- * Valida e normaliza um `MaintenanceDraft` antes da persistência.
+ * Válida e normaliza um `MaintenanceDraft` antes da persistência.
  * Garante invariantes do domínio sem depender de libs externas.
  */
-export function validateMaintenanceDraft(draft: MaintenanceDraft): DraftValidationResult {
-  const errors: ValidationError[] = [];
+export function válidateMaintenanceDraft(draft: MaintenanceDraft): DraftVálidationResult {
+  const errors: VálidationError[] = [];
 
   const title = draft.title?.trim() ?? '';
   if (title.length < 3) {

@@ -180,6 +180,6 @@ async function seedDatabase(db: SQLiteDatabase) {
 
   await db.runAsync(
     'INSERT OR IGNORE INTO workshop_reviews (id, workshop_id, user_id, rating, comment, created_at) VALUES (?, ?, ?, ?, ?, ?)',
-    ['rev-001', 'wrk-norte', 'user-demo', 5, 'Atendimento tecnico, explicou as pecas usadas e registrou tudo com nota.', now],
+    ['rev-001', 'wrk-norte', 'user-demo', 5, 'Atendimento técnico, explicou as peças usadas e registrou tudo com nota.', now],
   );
 }

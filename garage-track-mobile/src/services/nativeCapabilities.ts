@@ -45,7 +45,7 @@ function loadNotifications(): typeof import('expo-notifications') | null {
 export async function getCurrentGarageLocation(): Promise<NativeResult<DeviceLocation>> {
   const permission = await Location.requestForegroundPermissionsAsync();
   if (!permission.granted) {
-    return { error: 'Permissao de localizacao negada.' };
+    return { error: 'Permissão de localização negada.' };
   }
 
   const lastKnown = await Location.getLastKnownPositionAsync({ maxAge: 60_000, requiredAccuracy: 100 });
@@ -63,7 +63,7 @@ export async function getCurrentGarageLocation(): Promise<NativeResult<DeviceLoc
 export async function captureServicePhoto(): Promise<NativeResult<string | null>> {
   const permission = await ImagePicker.requestCameraPermissionsAsync();
   if (!permission.granted) {
-    return { error: 'Permissao de camera negada.' };
+    return { error: 'Permissão de camera negada.' };
   }
 
   const result = await ImagePicker.launchCameraAsync({
@@ -79,7 +79,7 @@ export async function captureServicePhoto(): Promise<NativeResult<string | null>
 export async function pickServicePhoto(): Promise<NativeResult<string | null>> {
   const permission = await ImagePicker.requestMediaLibraryPermissionsAsync();
   if (!permission.granted) {
-    return { error: 'Permissao de galeria negada.' };
+    return { error: 'Permissão de galeria negada.' };
   }
 
   const result = await ImagePicker.launchImageLibraryAsync({
@@ -97,7 +97,7 @@ export async function ensureMaintenanceNotificationChannel() {
   if (!Notif) return;
   if (Platform.OS === 'android') {
     await Notif.setNotificationChannelAsync('maintenance', {
-      name: 'Lembretes de manutencao',
+      name: 'Lembretes de manutenção',
       importance: Notif.AndroidImportance.HIGH,
       vibrationPattern: [0, 250, 250, 250],
       lightColor: '#1F6F4A',
@@ -114,7 +114,7 @@ export async function scheduleImmediateReviewNotification(title: string, body: s
   await ensureMaintenanceNotificationChannel();
   const permission = await Notif.requestPermissionsAsync();
   if (!permission.granted) {
-    return { error: 'Permissao de notificacao negada.' };
+    return { error: 'Permissão de notificacao negada.' };
   }
 
   const id = await Notif.scheduleNotificationAsync({

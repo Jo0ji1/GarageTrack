@@ -8,6 +8,7 @@ import { DATABASE_NAME, migrateDatabase } from './src/data/database';
 import { GarageTrackApp } from './src/presentation/GarageTrackApp';
 import { ThemeProvider, useTheme } from './src/presentation/ThemeContext';
 import { AuthProvider } from './src/presentation/AuthContext';
+import { CloudProvider } from './src/presentation/CloudContext';
 import { AuthGate } from './src/presentation/AuthGate';
 import { ErrorBoundary } from './src/presentation/ErrorBoundary';
 
@@ -16,7 +17,9 @@ export default function App() {
     <SafeAreaProvider>
       <ThemeProvider>
         <AuthProvider>
-          <ThemedShell />
+          <CloudProvider>
+            <ThemedShell />
+          </CloudProvider>
         </AuthProvider>
       </ThemeProvider>
     </SafeAreaProvider>

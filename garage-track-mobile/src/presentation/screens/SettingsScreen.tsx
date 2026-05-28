@@ -6,6 +6,7 @@ import { useTheme, type ThemePreference } from '../ThemeContext';
 import { radii, spacing, typography } from '../theme';
 import type { GarageSnapshot } from '../../domain/models';
 import { exportEncryptedBackup } from '../../services/backup';
+import { AccountSection } from './AccountSection';
 
 interface Props {
   snapshot: GarageSnapshot;
@@ -68,6 +69,9 @@ export function SettingsScreen({ snapshot }: Readonly<Props>) {
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
+        <Text style={styles.sectionTitle}>Conta na nuvem</Text>
+        <AccountSection vehicles={snapshot.vehicles} records={snapshot.maintenanceRecords} />
+
         <Text style={styles.sectionTitle}>Perfil</Text>
         <View style={styles.card}>
           <View style={styles.row}>
@@ -172,7 +176,7 @@ export function SettingsScreen({ snapshot }: Readonly<Props>) {
             onPress={() => Linking.openURL('https://github.com/expo/expo')}
           >
             <Text style={[styles.rowLabel, { flex: 1 }]}>Versão</Text>
-            <Text style={styles.rowHint}>1.1.0 · Expo SDK 56</Text>
+            <Text style={styles.rowHint}>1.3.0 · Expo SDK 56</Text>
           </Pressable>
         </View>
       </ScrollView>

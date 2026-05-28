@@ -83,11 +83,11 @@ type ScreenKey = 'dashboard' | 'health' | 'new' | 'history' | 'map' | 'trip' | '
 type IconComponent = ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
 
 const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
-  { key: 'dashboard', label: 'Inicio', Icon: Gauge },
-  { key: 'health', label: 'Saude', Icon: ShieldCheck },
+  { key: 'dashboard', label: 'Início', Icon: Gauge },
+  { key: 'health', label: 'Saúde', Icon: ShieldCheck },
   { key: 'new', label: 'Registrar', Icon: Wrench },
   { key: 'report', label: 'Problema', Icon: AlertOctagon },
-  { key: 'history', label: 'Historico', Icon: History },
+  { key: 'history', label: 'Histórico', Icon: History },
   { key: 'map', label: 'Mapa', Icon: MapPin },
   { key: 'trip', label: 'Viagem', Icon: Route },
   { key: 'alerts', label: 'Alertas', Icon: Bell },
@@ -113,11 +113,11 @@ export function GarageTrackApp() {
   }, [selectedVehicleId, vehicles]);
 
   if (isLoading || !snapshot || !vehicles[0]) {
-    return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migracoes e carregando seu historico." />;
+    return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migracoes e carregando seu histórico." />;
   }
 
   if (error) {
-    return <StateScreen title="Nao foi possivel carregar" description={error} tone="danger" />;
+    return <StateScreen title="Nao foi possível carregar" description={error} tone="danger" />;
   }
 
   const garage = snapshot;
@@ -270,7 +270,7 @@ function AppHeader({ userName, vehicleCount, onOpenSettings }: Readonly<{ userNa
     <View style={styles.header}>
       <View>
         <Text style={styles.eyebrow}>{greeting}, {userName.split(' ')[0]}</Text>
-        <Text style={styles.headerTitle}>Manutencao inteligente</Text>
+        <Text style={styles.headerTitle}>Manutenção inteligente</Text>
       </View>
       <View style={styles.headerActions}>
         <View style={styles.headerBadge}>
@@ -354,16 +354,16 @@ function DashboardScreen({
       <View style={styles.statGrid}>
         <StatCard Icon={Gauge} label="Quilometragem" value={`${vehicle.currentMileage.toLocaleString('pt-BR')} km`} />
         <StatCard Icon={CircleDollarSign} label="Total gasto" value={formatCurrency(totalSpentCents)} />
-        <StatCard Icon={CalendarClock} label="Ultimo servico" value={formatShortDate(lastRecord?.serviceDate)} />
-        <StatCard Icon={Bell} label="Proximo alerta" value={nextItem?.categoryLabel ?? 'Sem alerta'} />
+        <StatCard Icon={CalendarClock} label="Último serviço" value={formatShortDate(lastRecord?.serviceDate)} />
+        <StatCard Icon={Bell} label="Próximo alerta" value={nextItem?.categoryLabel ?? 'Sem alerta'} />
       </View>
 
       <View style={styles.actionGrid}>
-        <ActionCard Icon={Wrench} title="Registrar manutencao" description="Salve data, oficina, custo, midia e local." onPress={() => onNavigate('new')} />
+        <ActionCard Icon={Wrench} title="Registrar manutenção" description="Salve data, oficina, custo, midia e local." onPress={() => onNavigate('new')} />
         <ActionCard Icon={Route} title="Modo pre-viagem" description="Cruze vencimentos com a distancia planejada." onPress={() => onNavigate('trip')} />
       </View>
 
-      <SectionTitle title="Prioridade tecnica" action="ver saude" onPress={() => onNavigate('health')} />
+      <SectionTitle title="Prioridade técnica" action="ver saude" onPress={() => onNavigate('health')} />
       <View style={styles.priorityCard}>
         <View style={styles.priorityIcon}>{statusIcon(nextItem?.status ?? 'ok')}</View>
         <View style={styles.flexOne}>
@@ -381,10 +381,10 @@ function HealthScreen({ vehicle, records, preferences }: Readonly<{ vehicle: Veh
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={ShieldCheck} title="Painel de saude" description="Status por categoria considerando tempo, quilometragem media semanal e antecedencia configurada." />
+      <SectionHero Icon={ShieldCheck} title="Painel de saude" description="Status por categoria considerando tempo, quilometragem media semanal e antecedência configurada." />
       <View style={styles.statGrid}>
         <StatCard Icon={CircleDollarSign} label="Investimento" value={formatCurrency(health.totalSpentCents)} />
-        <StatCard Icon={CalendarClock} label="Ultima revisao" value={formatShortDate(health.lastServiceDate)} />
+        <StatCard Icon={CalendarClock} label="Última revisao" value={formatShortDate(health.lastServiceDate)} />
       </View>
       {health.items.map((item) => (
         <View key={item.categoryId} style={styles.healthRow}>
@@ -394,8 +394,8 @@ function HealthScreen({ vehicle, records, preferences }: Readonly<{ vehicle: Veh
           </View>
           <Text style={styles.cardText}>{item.reason}</Text>
           <View style={styles.healthMetaRow}>
-            <Text style={styles.cardMeta}>Ultimo: {formatShortDate(item.lastServiceDate)} • {item.lastMileage?.toLocaleString('pt-BR') ?? '0'} km</Text>
-            <Text style={styles.cardMeta}>Proximo: {formatShortDate(item.nextDueDate)} • {item.nextDueMileage?.toLocaleString('pt-BR') ?? '-'} km</Text>
+            <Text style={styles.cardMeta}>Último: {formatShortDate(item.lastServiceDate)} • {item.lastMileage?.toLocaleString('pt-BR') ?? '0'} km</Text>
+            <Text style={styles.cardMeta}>Próximo: {formatShortDate(item.nextDueDate)} • {item.nextDueMileage?.toLocaleString('pt-BR') ?? '-'} km</Text>
           </View>
         </View>
       ))}
@@ -434,12 +434,12 @@ function MaintenanceFormScreen({
   const recorderState = useAudioRecorderState(audioRecorder);
   const checklist = buildDynamicChecklist(categoryId, vehicle.type);
   const selectedWorkshop = workshops.find((workshop) => workshop.id === workshopId);
-  let audioButtonLabel = 'Gravar audio';
+  let audioButtonLabel = 'Gravar áudio';
 
   if (recorderState.isRecording) {
-    audioButtonLabel = 'Parar audio';
+    audioButtonLabel = 'Parar áudio';
   } else if (audioUri) {
-    audioButtonLabel = 'Audio salvo';
+    audioButtonLabel = 'Áudio salvo';
   }
 
   useEffect(() => {
@@ -452,7 +452,7 @@ function MaintenanceFormScreen({
   async function handleLocation() {
     const result = await getCurrentGarageLocation();
     if (result.error) {
-      Alert.alert('Localizacao', result.error);
+      Alert.alert('Localização', result.error);
       return;
     }
     if (result.data) {
@@ -491,7 +491,7 @@ function MaintenanceFormScreen({
 
     const permission = await AudioModule.requestRecordingPermissionsAsync();
     if (!permission.granted) {
-      Alert.alert('Audio', 'Permissao de microfone negada.');
+      Alert.alert('Audio', 'Permissão de microfone negada.');
       return;
     }
 
@@ -505,12 +505,12 @@ function MaintenanceFormScreen({
     const costNumber = Number(cost.replace(',', '.'));
 
     if (!Number.isFinite(mileageNumber) || mileageNumber <= 0) {
-      Alert.alert('Quilometragem', 'Informe uma quilometragem valida.');
+      Alert.alert('Quilometragem', 'Informe uma quilometragem válida.');
       return;
     }
 
     if (!Number.isFinite(costNumber) || costNumber < 0) {
-      Alert.alert('Custo', 'Informe um custo valido.');
+      Alert.alert('Custo', 'Informe um custo válido.');
       return;
     }
 
@@ -537,8 +537,8 @@ function MaintenanceFormScreen({
         photoUri,
         audioUri,
       });
-      await scheduleImmediateReviewNotification('Manutencao registrada', `${vehicle.name}: ${category.label} salvo no historico.`);
-      Alert.alert('Registro salvo', 'A manutencao foi adicionada ao historico tecnico do veiculo.');
+      await scheduleImmediateReviewNotification('Manutenção registrada', `${vehicle.name}: ${category.label} salvo no histórico.`);
+      Alert.alert('Registro salvo', 'A manutenção foi adicionada ao histórico técnico do veículo.');
       onSaved();
     } finally {
       setIsSaving(false);
@@ -548,7 +548,7 @@ function MaintenanceFormScreen({
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flexOne}>
       <ScrollView contentContainerStyle={styles.screenContent} keyboardShouldPersistTaps="handled">
-        <SectionHero Icon={Wrench} title="Registrar nova manutencao" description="O registro salva historico, checklist contextual, oficina, local, foto e audio em uma unica entrada." />
+        <SectionHero Icon={Wrench} title="Registrar nova manutenção" description="O registro salva histórico, checklist contextual, oficina, local, foto e audio em uma unica entrada." />
 
         <Text style={styles.fieldLabel}>Categoria</Text>
         <View style={styles.chipGrid}>
@@ -564,15 +564,15 @@ function MaintenanceFormScreen({
         </View>
 
         <View style={styles.formCard}>
-          <Input label="Titulo do servico" value={title} onChangeText={setTitle} placeholder={getCategoryDefinition(categoryId).label} />
+          <Input label="Titulo do serviço" value={title} onChangeText={setTitle} placeholder={getCategoryDefinition(categoryId).label} />
           <View style={styles.inputRow}>
             <Input label="Data" value={serviceDate} onChangeText={setServiceDate} placeholder="2026-05-25" />
             <Input label="Km" value={mileage} onChangeText={setMileage} keyboardType="numeric" />
           </View>
           <Input label="Custo (R$)" value={cost} onChangeText={setCost} keyboardType="decimal-pad" placeholder="489,90" />
-          <Input label="Marca da peca/produto" value={brand} onChangeText={setBrand} placeholder="Mobil, Bosch, Honda..." />
-          <Input label="Especificacao" value={specification} onChangeText={setSpecification} placeholder="5W30 API SP, DOT 4..." />
-          <Input label="Notas tecnicas" value={notes} onChangeText={setNotes} placeholder="Sintomas, diagnostico, garantia, observacoes" multiline />
+          <Input label="Marca da peça/produto" value={brand} onChangeText={setBrand} placeholder="Mobil, Bosch, Honda..." />
+          <Input label="Especificação" value={specification} onChangeText={setSpecification} placeholder="5W30 API SP, DOT 4..." />
+          <Input label="Notas técnicas" value={notes} onChangeText={setNotes} placeholder="Sintomas, diagnóstico, garantia, observações" multiline />
         </View>
 
         <Text style={styles.fieldLabel}>Oficina</Text>
@@ -603,7 +603,7 @@ function MaintenanceFormScreen({
 
         <View style={styles.nativeGrid}>
           <NativeButton Icon={MapPin} label={location ? 'GPS salvo' : 'Usar GPS'} onPress={handleLocation} active={Boolean(location)} />
-          <NativeButton Icon={Camera} label="Camera" onPress={handleCamera} active={Boolean(photoUri)} />
+          <NativeButton Icon={Camera} label="Câmera" onPress={handleCamera} active={Boolean(photoUri)} />
           <NativeButton Icon={ImagePlus} label="Galeria" onPress={handleGallery} active={Boolean(photoUri)} />
           <NativeButton Icon={Mic} label={audioButtonLabel} onPress={handleAudio} active={recorderState.isRecording || Boolean(audioUri)} />
         </View>
@@ -611,7 +611,7 @@ function MaintenanceFormScreen({
         {photoUri ? <Image source={{ uri: photoUri }} style={styles.photoPreview} /> : null}
         {audioUri ? <Text style={styles.cardMeta}>Audio anexado: {audioUri.split('/').pop()}</Text> : null}
 
-        <PrimaryButton Icon={Save} label={isSaving ? 'Salvando...' : 'Salvar manutencao'} onPress={submit} disabled={isSaving} />
+        <PrimaryButton Icon={Save} label={isSaving ? 'Salvando...' : 'Salvar manutenção'} onPress={submit} disabled={isSaving} />
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -626,7 +626,7 @@ function HistoryScreen({ vehicle, records, workshops }: Readonly<{ vehicle: Vehi
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={History} title="Historico tecnico" description="Consulte registros por categoria, veja pecas usadas, custos, oficina e evidencias anexadas." />
+      <SectionHero Icon={History} title="Histórico técnico" description="Consulte registros por categoria, veja peças usadas, custos, oficina e evidencias anexadas." />
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail}>
         <Pressable style={[styles.selectChip, filter === 'all' && styles.selectChipSelected]} onPress={() => setFilter('all')}>
           <Text style={[styles.selectChipText, filter === 'all' && styles.selectChipTextSelected]}>Todos</Text>
@@ -653,7 +653,7 @@ function HistoryScreen({ vehicle, records, workshops }: Readonly<{ vehicle: Vehi
 
       {selectedRecord ? (
         <View style={styles.detailCard}>
-          <Text style={styles.sectionHeading}>Detalhe da manutencao</Text>
+          <Text style={styles.sectionHeading}>Detalhe da manutenção</Text>
           <Text style={styles.detailTitle}>{selectedRecord.title}</Text>
           <Text style={styles.cardText}>{selectedRecord.notes || 'Sem notas adicionais.'}</Text>
           <Text style={styles.cardMeta}>Oficina: {workshops.find((workshop) => workshop.id === selectedRecord.workshopId)?.name ?? 'Nao informada'}</Text>
@@ -744,12 +744,12 @@ function ServiceMapScreen({
     }
     await onReview(workshopId, Math.min(5, Math.max(1, Number(rating) || 5)), reviewText || 'Atendimento registrado pelo GarageTrack.');
     setReviewText('');
-    Alert.alert('Avaliacao salva', 'Sua avaliacao da oficina foi registrada localmente.');
+    Alert.alert('Avaliação salva', 'Sua avaliação da oficina foi registrada localmente.');
   }
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={MapPin} title="Mapa de servicos" description="Veja onde cada manutencao foi feita e mantenha uma memoria geografica das oficinas confiaveis." />
+      <SectionHero Icon={MapPin} title="Mapa de serviços" description="Veja onde cada manutenção foi feita e mantenha uma memória geografica das oficinas confiaveis." />
       <View style={styles.mapCard}>
         <MapView
           style={styles.map}
@@ -841,7 +841,7 @@ function ServiceMapScreen({
         </>
       ) : null}
 
-      <Text style={styles.sectionHeading}>Oficinas proximas e historico</Text>
+      <Text style={styles.sectionHeading}>Oficinas próximas e histórico</Text>
       {workshops.map((workshop) => {
         const workshopReviews = reviews.filter((review) => review.workshopId === workshop.id);
         return (
@@ -876,8 +876,8 @@ function ServiceMapScreen({
           ))}
         </ScrollView>
         <Input label="Nota" value={rating} onChangeText={setRating} keyboardType="numeric" />
-        <Input label="Comentario" value={reviewText} onChangeText={setReviewText} multiline placeholder="Atendimento, prazo, qualidade tecnica..." />
-        <PrimaryButton Icon={Save} label="Salvar avaliacao" onPress={submitReview} />
+        <Input label="Comentario" value={reviewText} onChangeText={setReviewText} multiline placeholder="Atendimento, prazo, qualidade técnica..." />
+        <PrimaryButton Icon={Save} label="Salvar avaliação" onPress={submitReview} />
       </View>
     </ScrollView>
   );
@@ -925,7 +925,7 @@ function AlertsScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={Bell} title="Configurar alertas" description="Cada categoria tem intervalo tecnico e antecedencia propria em dias e quilometros." />
+      <SectionHero Icon={Bell} title="Configurar alertas" description="Cada categoria tem intervalo técnico e antecedência propria em dias e quilometros." />
       {vehiclePreferences.map((preference) => {
         const category = getCategoryDefinition(preference.categoryId);
         return (
@@ -1079,7 +1079,7 @@ function statusLabel(status: HealthStatus) {
     return 'Vencido';
   }
   if (status === 'attention') {
-    return 'Atencao';
+    return 'Atenção';
   }
   return 'OK';
 }

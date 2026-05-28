@@ -188,7 +188,7 @@ export function useGarageTrack() {
     try {
       const userRow = await db.getFirstAsync<UserRow>('SELECT * FROM users LIMIT 1');
       if (!userRow) {
-        throw new Error('Usuario inicial nao encontrado no banco local.');
+        throw new Error('Usuário inicial nao encontrado no banco local.');
       }
 
       const vehicleRows = await db.getAllAsync<VehicleRow>('SELECT * FROM vehicles ORDER BY created_at ASC');
