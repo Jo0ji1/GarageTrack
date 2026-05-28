@@ -69,6 +69,26 @@ export async function getCurrentUser(): Promise<CloudUser | null> {
   return health.ok ? health.user : null;
 }
 
+function describeSupabaseError(err: unknown, action: string): string {
+  if (!err) return `Falha ao ${action}`;
+  const e = err as { message?: string; details?: string; hint?: string; code?: string };
+  const parts: string[] = [];
+  if (e.message) parts.push(e.message);
+  if (e.details) parts.push(e.details);
+  if (e.hint) parts.push(`Dica: ${e.hint}`);
+  if (e.code) parts.push(`[${e.code}]`);
+  const joined = parts.join(' · ');
+  if (!joined) return `Falha ao ${action} (sem detalhes da API)`;
+  // Erros típicos de fetch do RN
+  if (/Network request failed/i.test(joined)) {
+    return 'Sem conexão com o Supabase. Verifique sua internet ou a URL do projeto.';
+  }
+  if (/invalid input syntax for type uuid/i.test(joined)) {
+    return 'Schema do Supabase desatualizado: rode a migration 20260528000200_text_ids.sql.';
+  }
+  return `${joined}`;
+}
+
 export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: number }> {
   if (!supabase) throw new Error('Supabase não configurado');
   const user = await getCurrentUser();
@@ -87,7 +107,10 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
     image_uri: null,
   }));
   const { error } = await supabase.from('vehicles').upsert(rows, { onConflict: 'id' });
-  if (error) throw error;
+  if (error) {
+    if (__DEV__) console.error('[cloudSync] pushVehicles error:', error);
+    throw new Error(describeSupabaseError(error, 'enviar veículos'));
+  }
   return { pushed: rows.length };
 }
 
@@ -109,7 +132,10 @@ export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushe
     workshop_name: r.workshopId ?? null,
   }));
   const { error } = await supabase.from('maintenance_records').upsert(rows, { onConflict: 'id' });
-  if (error) throw error;
+  if (error) {
+    if (__DEV__) console.error('[cloudSync] pushRecords error:', error);
+    throw new Error(describeSupabaseError(error, 'enviar manutenções'));
+  }
   return { pushed: rows.length };
 }
 
