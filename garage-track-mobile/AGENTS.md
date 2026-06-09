@@ -1,3 +1,6 @@
-# Expo HAS CHANGED
+# GarageTrack Mobile
 
-Read the exact versioned docs at https://docs.expo.dev/versions/v56.0.0/ before writing any code.
+As convenções do projeto estão em [`../AGENTS.md`](../AGENTS.md).
+
+## Expo SDK 56
+Leia os docs versionados em https://docs.expo.dev/versions/v56.0.0/ antes de escrever código nativo.

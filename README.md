@@ -52,15 +52,16 @@ Documentação completa:
 - [docs/SECURITY.md](docs/SECURITY.md)
 - [docs/ROADMAP.md](docs/ROADMAP.md)
 - [docs/RUNBOOK.md](docs/RUNBOOK.md)
-- [docs/documentacao_produto.md](docs/documentacao_produto.md)
+- [docs/SUPABASE.md](docs/SUPABASE.md)
+- Entregáveis acadêmicos em [docs/academico/](docs/academico/)
 
 ## 🗺️ Roadmap (resumo)
 
 - [x] v1.0 — Núcleo offline (manutenções, alertas, oficinas locais)
 - [x] v1.1 — Auth biométrica, backup criptografado, temas
 - [x] v1.2 — Busca real de oficinas via OSM, scripts Windows
-- [ ] v1.3 — Login Google + sync opcional com Supabase
-- [ ] v1.4 — APK público via EAS + auto-update OTA
+- [x] v1.3 — Conta na nuvem (Supabase) + login e-mail/senha + sync bidirecional
+- [ ] v1.4 — Login Google + APK público via EAS + auto-update OTA
 - [ ] v2.0 — iOS, widgets Android, integração calendário
 
 Veja [docs/ROADMAP.md](docs/ROADMAP.md) para o plano detalhado.

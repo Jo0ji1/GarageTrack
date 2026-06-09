@@ -5,13 +5,15 @@ import { useCloud } from '../CloudContext';
 import { useTheme } from '../ThemeContext';
 import { radii, spacing, typography } from '../theme';
 import type { MaintenanceRecord, Vehicle } from '../../domain/models';
+import type { RemoteRecord, RemoteVehicle } from '../../services/cloudSync';
 
 interface Props {
   vehicles: Vehicle[];
   records: MaintenanceRecord[];
+  applyRemoteData: (vehicles: RemoteVehicle[], records: RemoteRecord[]) => Promise<void>;
 }
 
-export function AccountSection({ vehicles, records }: Readonly<Props>) {
+export function AccountSection({ vehicles, records, applyRemoteData }: Readonly<Props>) {
   const { palette } = useTheme();
   const cloud = useCloud();
   const styles = useMemo(() => makeStyles(palette), [palette]);
@@ -64,8 +66,12 @@ export function AccountSection({ vehicles, records }: Readonly<Props>) {
 
   async function handleSync() {
     try {
-      await cloud.sync(vehicles, records);
-      Alert.alert('Sincronização concluída', 'Seus dados foram enviados e atualizados.');
+      const report = await cloud.sync(vehicles, records);
+      await applyRemoteData(report.remoteVehicles, report.remoteRecords);
+      Alert.alert(
+        'Sincronização concluída',
+        `Enviados ${report.pushedVehicles + report.pushedRecords} · recebidos ${report.pulledVehicles + report.pulledRecords}.`,
+      );
     } catch (err) {
       Alert.alert('Falha na sincronização', err instanceof Error ? err.message : 'Erro de rede.');
     }

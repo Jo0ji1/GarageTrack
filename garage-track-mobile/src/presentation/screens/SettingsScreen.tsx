@@ -5,17 +5,19 @@ import { useAuth } from '../AuthContext';
 import { useTheme, type ThemePreference } from '../ThemeContext';
 import { radii, spacing, typography } from '../theme';
 import type { GarageSnapshot } from '../../domain/models';
+import type { RemoteRecord, RemoteVehicle } from '../../services/cloudSync';
 import { exportEncryptedBackup } from '../../services/backup';
 import { AccountSection } from './AccountSection';
 
 interface Props {
   snapshot: GarageSnapshot;
+  applyRemoteData: (vehicles: RemoteVehicle[], records: RemoteRecord[]) => Promise<void>;
 }
 
 /**
  * Tela de configurações: perfil, segurança, aparência e backup.
  */
-export function SettingsScreen({ snapshot }: Readonly<Props>) {
+export function SettingsScreen({ snapshot, applyRemoteData }: Readonly<Props>) {
   const { palette, mode, preference, setPreference } = useTheme();
   const {
     userName,
@@ -70,7 +72,7 @@ export function SettingsScreen({ snapshot }: Readonly<Props>) {
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
       <ScrollView contentContainerStyle={styles.content}>
         <Text style={styles.sectionTitle}>Conta na nuvem</Text>
-        <AccountSection vehicles={snapshot.vehicles} records={snapshot.maintenanceRecords} />
+        <AccountSection vehicles={snapshot.vehicles} records={snapshot.maintenanceRecords} applyRemoteData={applyRemoteData} />
 
         <Text style={styles.sectionTitle}>Perfil</Text>
         <View style={styles.card}>

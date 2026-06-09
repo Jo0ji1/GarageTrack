@@ -193,6 +193,8 @@ export type SyncReport = {
   pushedRecords: number;
   pulledVehicles: number;
   pulledRecords: number;
+  remoteVehicles: RemoteVehicle[];
+  remoteRecords: RemoteRecord[];
   startedAt: string;
   finishedAt: string;
 };
@@ -209,6 +211,8 @@ export async function syncAll(
     pushedRecords: pr.pushed,
     pulledVehicles: rv.length,
     pulledRecords: rr.length,
+    remoteVehicles: rv,
+    remoteRecords: rr,
     startedAt,
     finishedAt: new Date().toISOString(),
   };

@@ -15,6 +15,7 @@ import {
   Workshop,
   WorkshopReview,
 } from '../domain/models';
+import type { RemoteRecord, RemoteVehicle } from '../services/cloudSync';
 
 interface UserRow {
   id: string;
@@ -282,6 +283,75 @@ export function useGarageTrack() {
     await refresh();
   }
 
+  // Aplica dados vindos da nuvem (pull) no SQLite local. O banco local é a
+  // fonte da verdade; aqui apenas mesclamos veículos e manutenções remotos
+  // por id (upsert), preservando campos só-locais (weekly_mileage, vin, etc.).
+  async function applyRemoteData(
+    remoteVehicles: RemoteVehicle[],
+    remoteRecords: RemoteRecord[],
+  ) {
+    if (remoteVehicles.length === 0 && remoteRecords.length === 0) {
+      return;
+    }
+
+    const userRow = await db.getFirstAsync<{ id: string }>('SELECT id FROM users LIMIT 1');
+    const localUserId = userRow?.id ?? 'user-demo';
+    const now = new Date().toISOString();
+
+    await db.withTransactionAsync(async () => {
+      for (const v of remoteVehicles) {
+        await db.runAsync(
+          `INSERT INTO vehicles
+            (id, user_id, type, name, brand, model, year, plate, current_mileage, weekly_mileage, vin, created_at)
+           VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             type = excluded.type, name = excluded.name, brand = excluded.brand,
+             model = excluded.model, year = excluded.year, plate = excluded.plate,
+             current_mileage = MAX(vehicles.current_mileage, excluded.current_mileage)`,
+          [
+            v.id,
+            localUserId,
+            v.type === 'motorcycle' ? 'motorcycle' : 'car',
+            v.name,
+            v.brand ?? '',
+            v.model ?? '',
+            v.year ?? 0,
+            v.plate ?? '',
+            v.current_mileage ?? 0,
+            0,
+            null,
+            now,
+          ],
+        );
+      }
+
+      for (const r of remoteRecords) {
+        await db.runAsync(
+          `INSERT INTO maintenance_records
+            (id, vehicle_id, workshop_id, category_id, title, service_date, mileage, cost_cents, notes, latitude, longitude, parts_json, checklist_json, photo_uri, audio_uri, created_at)
+           VALUES (?, ?, NULL, ?, ?, ?, ?, ?, ?, NULL, NULL, '{}', '[]', NULL, NULL, ?)
+           ON CONFLICT(id) DO UPDATE SET
+             category_id = excluded.category_id, title = excluded.title,
+             service_date = excluded.service_date, mileage = excluded.mileage,
+             cost_cents = excluded.cost_cents, notes = excluded.notes`,
+          [
+            r.id,
+            r.vehicle_id,
+            r.category_id,
+            r.title,
+            r.performed_at,
+            r.mileage ?? 0,
+            r.cost_cents ?? 0,
+            r.description ?? '',
+            now,
+          ],
+        );
+      }
+    });
+
+    await refresh();
+  }
+
   useEffect(() => {
     void refresh();
   }, [db]);
@@ -294,5 +364,6 @@ export function useGarageTrack() {
     addMaintenance,
     updateAlertPreference,
     addWorkshopReview,
+    applyRemoteData,
   };
 }

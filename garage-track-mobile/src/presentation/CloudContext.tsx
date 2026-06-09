@@ -22,7 +22,7 @@ interface CloudContextValue {
   signIn: (email: string, password: string) => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<void>;
+  sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<SyncReport>;
   refreshUser: () => Promise<void>;
 }
 
@@ -117,6 +117,7 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     try {
       const report = await syncAll(vehicles, records);
       setLastSync(report);
+      return report;
     } catch (err) {
       setLastError(err instanceof Error ? err.message : 'falha ao sincronizar');
       setStatus('error');

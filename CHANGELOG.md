@@ -4,6 +4,11 @@ Todas as mudanças notáveis serão documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
+### Adicionado
+- **Sync bidirecional**: o "Sincronizar agora" agora também aplica os dados recebidos da nuvem no SQLite local (`applyRemoteData` em `useGarageTrack`), fazendo merge de veículos (mantém a maior quilometragem) e registros de manutenção. Antes o pull baixava os dados mas não os persistia localmente.
+
+### Alterado
+- **Reorganização de docs**: entregáveis acadêmicos movidos para `docs/academico/`; material de origem (PDFs, atividades) em `docs/academico/material-origem/`. Docs de engenharia (`ARCHITECTURE`, `SECURITY`, `ROADMAP`, `RUNBOOK`, `SUPABASE`) permanecem em `docs/`.
 
 ## [1.3.0] — 2026-Q2
 ### Adicionado

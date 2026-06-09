@@ -94,7 +94,7 @@ const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
 ];
 
 export function GarageTrackApp() {
-  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview } = useGarageTrack();
+  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData } = useGarageTrack();
   const { userName: authUserName } = useAuth();
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
@@ -185,7 +185,7 @@ export function GarageTrackApp() {
       case 'alerts':
         return <AlertsScreen vehicle={selectedVehicle} preferences={garage.alertPreferences} onUpdate={updateAlertPreference} />;
       case 'settings':
-        return <SettingsScreen snapshot={garage} />;
+        return <SettingsScreen snapshot={garage} applyRemoteData={applyRemoteData} />;
       case 'dashboard':
       default:
         return (
