@@ -14,7 +14,10 @@ import {
 const DAY_IN_MS = 24 * 60 * 60 * 1000;
 
 function toDate(value: string) {
-  return new Date(`${value}T12:00:00`);
+  // Normaliza timestamps completos (ex: "2026-05-28T07:53:25+00:00") para
+  // YYYY-MM-DD antes de adicionar a hora fixa, evitando datas inválidas no Hermes.
+  const dateOnly = value.length > 10 ? value.slice(0, 10) : value;
+  return new Date(`${dateOnly}T12:00:00`);
 }
 
 function toIsoDate(date: Date) {

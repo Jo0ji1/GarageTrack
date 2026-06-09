@@ -391,7 +391,9 @@ export function useGarageTrack() {
             r.vehicle_id,
             r.category_id,
             r.title,
-            r.performed_at,
+            // performed_at vem do Supabase como timestamptz ("2026-05-28T07:53:25+00:00").
+            // service_date espera apenas YYYY-MM-DD; fatiar evita crash no toDate() do Hermes.
+            r.performed_at.slice(0, 10),
             r.mileage ?? 0,
             r.cost_cents ?? 0,
             r.description ?? '',
