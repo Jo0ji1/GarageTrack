@@ -6,6 +6,12 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 ## [Unreleased]
 ### Adicionado
 - **Sync bidirecional**: o "Sincronizar agora" agora também aplica os dados recebidos da nuvem no SQLite local (`applyRemoteData` em `useGarageTrack`), fazendo merge de veículos (mantém a maior quilometragem) e registros de manutenção. Antes o pull baixava os dados mas não os persistia localmente.
+- **CRUD de veículos**: usuário pode adicionar, editar e excluir veículos diretamente no app (`VehicleFormScreen`). Alertas de manutenção são criados automaticamente ao adicionar um veículo. Botão "Novo" e ícone de edição no seletor de veículos.
+- **Problema → Navegação pós-envio**: após salvar um relato de problema, o app oferece ligar ou navegar até a oficina selecionada (via `Linking`).
+
+### Corrigido
+- **FK violation no sync**: `pushVehicles` agora executa antes de `pushRecords` (eram paralelos, causando violação de chave estrangeira no Supabase — erro `[23503]`).
+- **Mapa: fallback interativo**: quando o Google Maps não carrega (timeout 4 s), exibe mensagem explicativa e botão "Abrir no app de mapas" — antes o overlay bloqueava o toque.
 
 ### Alterado
 - **Reorganização de docs**: entregáveis acadêmicos movidos para `docs/academico/`; material de origem (PDFs, atividades) em `docs/academico/material-origem/`. Docs de engenharia (`ARCHITECTURE`, `SECURITY`, `ROADMAP`, `RUNBOOK`, `SUPABASE`) permanecem em `docs/`.

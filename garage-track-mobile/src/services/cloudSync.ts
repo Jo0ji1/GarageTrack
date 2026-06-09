@@ -204,7 +204,9 @@ export async function syncAll(
   localRecords: MaintenanceRecord[],
 ): Promise<SyncReport> {
   const startedAt = new Date().toISOString();
-  const [pv, pr] = await Promise.all([pushVehicles(localVehicles), pushRecords(localRecords)]);
+  // Veículos devem ser inseridos antes dos registros (FK vehicle_id → vehicles.id).
+  const pv = await pushVehicles(localVehicles);
+  const pr = await pushRecords(localRecords);
   const [rv, rr] = await Promise.all([pullVehicles(), pullRecords()]);
   return {
     pushedVehicles: pv.pushed,

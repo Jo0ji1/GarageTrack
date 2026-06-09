@@ -134,6 +134,18 @@ export interface PreTripChecklistItem {
   message: string;
 }
 
+export interface VehicleDraft {
+  type: VehicleType;
+  name: string;
+  brand: string;
+  model: string;
+  year: number;
+  plate: string;
+  currentMileage: number;
+  weeklyMileage: number;
+  vin?: string;
+}
+
 export interface MaintenanceDraft {
   vehicleId: string;
   workshopId?: string;

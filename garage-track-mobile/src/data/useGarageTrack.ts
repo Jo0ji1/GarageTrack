@@ -11,9 +11,11 @@ import {
   MaintenanceRecord,
   UserProfile,
   Vehicle,
+  VehicleDraft,
   VehicleType,
   Workshop,
   WorkshopReview,
+  maintenanceCategories,
 } from '../domain/models';
 import type { RemoteRecord, RemoteVehicle } from '../services/cloudSync';
 
@@ -283,6 +285,56 @@ export function useGarageTrack() {
     await refresh();
   }
 
+  // Adiciona um novo veículo e cria automaticamente as preferências de alerta para
+  // as categorias aplicáveis ao tipo do veículo.
+  async function addVehicle(draft: VehicleDraft): Promise<string> {
+    const id = `veh-${Date.now()}`;
+    const userId = snapshot?.user.id ?? 'user-demo';
+    const now = new Date().toISOString();
+
+    await db.withTransactionAsync(async () => {
+      await db.runAsync(
+        `INSERT INTO vehicles
+          (id, user_id, type, name, brand, model, year, plate, current_mileage, weekly_mileage, vin, created_at)
+         VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)`,
+        [id, userId, draft.type, draft.name, draft.brand, draft.model, draft.year,
+         draft.plate, draft.currentMileage, draft.weeklyMileage, draft.vin ?? null, now],
+      );
+
+      const applicable = maintenanceCategories.filter((c) => c.appliesTo.includes(draft.type));
+      for (const cat of applicable) {
+        await db.runAsync(
+          `INSERT OR IGNORE INTO alert_preferences
+            (id, vehicle_id, category_id, interval_days, interval_km, lead_days, lead_km, enabled)
+           VALUES (?, ?, ?, ?, ?, ?, ?, 1)`,
+          [`pref-${id}-${cat.id}`, id, cat.id,
+           cat.defaultIntervalDays, cat.defaultIntervalKm, cat.defaultLeadDays, cat.defaultLeadKm],
+        );
+      }
+    });
+
+    await refresh();
+    return id;
+  }
+
+  async function updateVehicle(id: string, draft: VehicleDraft): Promise<void> {
+    await db.runAsync(
+      `UPDATE vehicles
+       SET type=?, name=?, brand=?, model=?, year=?, plate=?,
+           current_mileage=?, weekly_mileage=?, vin=?
+       WHERE id=?`,
+      [draft.type, draft.name, draft.brand, draft.model, draft.year,
+       draft.plate, draft.currentMileage, draft.weeklyMileage, draft.vin ?? null, id],
+    );
+    await refresh();
+  }
+
+  // Exclui o veículo e, por CASCADE, todos os registros de manutenção e alertas associados.
+  async function deleteVehicle(vehicleId: string): Promise<void> {
+    await db.runAsync('DELETE FROM vehicles WHERE id = ?', [vehicleId]);
+    await refresh();
+  }
+
   // Aplica dados vindos da nuvem (pull) no SQLite local. O banco local é a
   // fonte da verdade; aqui apenas mesclamos veículos e manutenções remotos
   // por id (upsert), preservando campos só-locais (weekly_mileage, vin, etc.).
@@ -361,6 +413,9 @@ export function useGarageTrack() {
     isLoading,
     error,
     refresh,
+    addVehicle,
+    updateVehicle,
+    deleteVehicle,
     addMaintenance,
     updateAlertPreference,
     addWorkshopReview,

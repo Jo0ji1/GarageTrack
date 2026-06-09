@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Alert, Image, KeyboardAvoidingView, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Image, KeyboardAvoidingView, Linking, Platform, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { AudioModule, RecordingPresets, setAudioModeAsync, useAudioRecorder, useAudioRecorderState } from 'expo-audio';
 import { AlertOctagon, Camera as CameraIcon, Image as ImageIcon, Mic, Send } from 'lucide-react-native';
 import { useTheme } from '../ThemeContext';
@@ -95,7 +95,36 @@ export function ReportProblemScreen({ vehicle, workshops, onSubmit }: Readonly<P
       setDescription('');
       setPhotoUri(undefined);
       setAudioUri(undefined);
-      Alert.alert('Enviado', 'Seu relato foi salvo no histórico do veículo.');
+
+      const selected = workshops.find((w) => w.id === workshopId);
+      if (selected) {
+        Alert.alert(
+          'Relato salvo',
+          `Registrado no histórico de ${vehicle.name}.\nDeseja ir até ${selected.name}?`,
+          [
+            { text: 'Fechar', style: 'cancel' },
+            {
+              text: 'Ligar',
+              onPress: () => {
+                if (selected.phone) Linking.openURL(`tel:${selected.phone}`);
+              },
+            },
+            {
+              text: 'Navegar',
+              onPress: () => {
+                const url = `geo:${selected.latitude},${selected.longitude}?q=${encodeURIComponent(selected.name)}`;
+                Linking.openURL(url).catch(() =>
+                  Linking.openURL(
+                    `https://www.google.com/maps/search/?api=1&query=${selected.latitude},${selected.longitude}`,
+                  ),
+                );
+              },
+            },
+          ],
+        );
+      } else {
+        Alert.alert('Enviado', 'Seu relato foi salvo no histórico do veículo.');
+      }
     } catch (err) {
       Alert.alert('Falha', err instanceof Error ? err.message : 'Erro inesperado.');
     } finally {

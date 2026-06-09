@@ -31,6 +31,8 @@ import {
   MapPin,
   Mic,
   Navigation,
+  Pencil,
+  PlusCircle,
   Route,
   Save,
   Search,
@@ -55,6 +57,7 @@ import {
   MaintenanceDraft,
   MaintenanceRecord,
   Vehicle,
+  VehicleDraft,
   Workshop,
   WorkshopReview,
   getCategoriesForVehicle,
@@ -78,8 +81,9 @@ import { colors, layout, radii, shadow, shadowSoft, spacing } from './theme';
 import { useAuth } from './AuthContext';
 import { SettingsScreen } from './screens/SettingsScreen';
 import { ReportProblemScreen } from './screens/ReportProblemScreen';
+import { VehicleFormScreen } from './screens/VehicleFormScreen';
 
-type ScreenKey = 'dashboard' | 'health' | 'new' | 'history' | 'map' | 'trip' | 'alerts' | 'report' | 'settings';
+type ScreenKey = 'dashboard' | 'health' | 'new' | 'history' | 'map' | 'trip' | 'alerts' | 'report' | 'settings' | 'vehicle-form';
 type IconComponent = ComponentType<{ color?: string; size?: number; strokeWidth?: number }>;
 
 const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
@@ -94,10 +98,11 @@ const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
 ];
 
 export function GarageTrackApp() {
-  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData } = useGarageTrack();
+  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData, addVehicle, updateVehicle, deleteVehicle } = useGarageTrack();
   const { userName: authUserName } = useAuth();
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
+  const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
 
   const vehicles = snapshot?.vehicles ?? [];
 
@@ -148,6 +153,26 @@ export function GarageTrackApp() {
     });
   }
 
+  async function handleAddVehicle(draft: VehicleDraft) {
+    await addVehicle(draft);
+    setActiveScreen('dashboard');
+  }
+
+  async function handleUpdateVehicle(draft: VehicleDraft) {
+    if (!vehicleToEdit) return;
+    await updateVehicle(vehicleToEdit.id, draft);
+    setVehicleToEdit(null);
+    setActiveScreen('dashboard');
+  }
+
+  async function handleDeleteVehicle() {
+    if (!vehicleToEdit) return;
+    const deletedId = vehicleToEdit.id;
+    setVehicleToEdit(null);
+    setActiveScreen('dashboard');
+    await deleteVehicle(deletedId);
+  }
+
   function renderScreen() {
     switch (activeScreen) {
       case 'health':
@@ -186,6 +211,14 @@ export function GarageTrackApp() {
         return <AlertsScreen vehicle={selectedVehicle} preferences={garage.alertPreferences} onUpdate={updateAlertPreference} />;
       case 'settings':
         return <SettingsScreen snapshot={garage} applyRemoteData={applyRemoteData} />;
+      case 'vehicle-form':
+        return (
+          <VehicleFormScreen
+            initialValues={vehicleToEdit ?? undefined}
+            onSave={vehicleToEdit ? handleUpdateVehicle : handleAddVehicle}
+            onDelete={vehicleToEdit ? handleDeleteVehicle : undefined}
+          />
+        );
       case 'dashboard':
       default:
         return (
@@ -201,16 +234,23 @@ export function GarageTrackApp() {
     }
   }
 
-  const isModalScreen = activeScreen === 'settings';
+  const isModalScreen = activeScreen === 'settings' || activeScreen === 'vehicle-form';
+  const modalTitle = activeScreen === 'settings' ? 'Configurações' : vehicleToEdit ? 'Editar veículo' : 'Novo veículo';
 
   return (
     <View style={styles.appShell}>
       {isModalScreen ? (
-        <ModalHeader title="Configurações" onBack={() => setActiveScreen('dashboard')} />
+        <ModalHeader title={modalTitle} onBack={() => { setVehicleToEdit(null); setActiveScreen('dashboard'); }} />
       ) : (
         <>
           <AppHeader userName={displayUserName} vehicleCount={vehicles.length} onOpenSettings={() => setActiveScreen('settings')} />
-          <VehicleSwitcher vehicles={vehicles} selectedVehicleId={selectedVehicle.id} onSelect={setSelectedVehicleId} />
+          <VehicleSwitcher
+            vehicles={vehicles}
+            selectedVehicleId={selectedVehicle.id}
+            onSelect={setSelectedVehicleId}
+            onAdd={() => { setVehicleToEdit(null); setActiveScreen('vehicle-form'); }}
+            onEdit={(v) => { setVehicleToEdit(v); setActiveScreen('vehicle-form'); }}
+          />
           <ScrollView
             horizontal
             showsHorizontalScrollIndicator={false}
@@ -294,10 +334,14 @@ function VehicleSwitcher({
   vehicles,
   selectedVehicleId,
   onSelect,
+  onAdd,
+  onEdit,
 }: Readonly<{
   vehicles: Vehicle[];
   selectedVehicleId: string;
   onSelect: (id: string) => void;
+  onAdd: () => void;
+  onEdit: (vehicle: Vehicle) => void;
 }>) {
   return (
     <ScrollView
@@ -316,9 +360,24 @@ function VehicleSwitcher({
               <Text numberOfLines={1} style={[styles.vehicleChipTitle, selected && styles.vehicleChipTitleSelected]}>{vehicle.name}</Text>
               <Text style={[styles.vehicleChipMeta, selected && styles.vehicleChipMetaSelected]}>{vehicle.currentMileage.toLocaleString('pt-BR')} km</Text>
             </View>
+            {selected ? (
+              <Pressable
+                hitSlop={8}
+                onPress={() => onEdit(vehicle)}
+                style={styles.vehicleEditButton}
+                accessibilityLabel={`Editar ${vehicle.name}`}
+              >
+                <Pencil size={13} color={colors.paper} strokeWidth={2.4} />
+              </Pressable>
+            ) : null}
           </Pressable>
         );
       })}
+      {/* Botão de adicionar novo veículo */}
+      <Pressable style={styles.vehicleAddChip} onPress={onAdd} accessibilityLabel="Adicionar veículo">
+        <PlusCircle size={19} color={colors.pine} />
+        <Text style={styles.vehicleAddText}>Novo</Text>
+      </Pressable>
     </ScrollView>
   );
 }
@@ -722,7 +781,7 @@ function ServiceMapScreen({
       if (!mapReady) {
         setMapFailed(true);
       }
-    }, 6000);
+    }, 4000);
     return () => clearTimeout(timeout);
   }, [mapReady]);
 
@@ -795,11 +854,23 @@ function ServiceMapScreen({
           ) : null}
         </MapView>
         {mapReady ? null : (
-          <View style={styles.mapOverlay} pointerEvents="none">
-            <ActivityIndicator color={colors.pine} />
-            <Text style={styles.mapOverlayText}>
-              {mapFailed ? 'O mapa demorou para carregar. Use “Abrir no app de mapas” abaixo.' : 'Carregando mapa...'}
-            </Text>
+          <View style={styles.mapOverlay} pointerEvents={mapFailed ? 'box-none' : 'none'}>
+            {mapFailed ? (
+              <View style={styles.mapFailedBox}>
+                <Text style={styles.mapOverlayText}>
+                  {'O mapa do Google nao carregou. Verifique se a API "Maps SDK for Android" esta ativa no Google Cloud Console.'}
+                </Text>
+                <Pressable style={styles.mapFallbackButton} onPress={() => openInExternalMaps(firstLocation?.latitude ?? -5.7945, firstLocation?.longitude ?? -35.211)}>
+                  <Navigation size={15} color={colors.pine} />
+                  <Text style={styles.mapFallbackButtonText}>Abrir no app de mapas</Text>
+                </Pressable>
+              </View>
+            ) : (
+              <>
+                <ActivityIndicator color={colors.pine} />
+                <Text style={styles.mapOverlayText}>Carregando mapa...</Text>
+              </>
+            )}
           </View>
         )}
       </View>
@@ -1209,6 +1280,29 @@ const styles = StyleSheet.create({
   },
   vehicleChipMetaSelected: {
     color: colors.mint,
+  },
+  vehicleEditButton: {
+    padding: 4,
+    marginLeft: 2,
+    opacity: 0.85,
+  },
+  vehicleAddChip: {
+    height: 72,
+    paddingHorizontal: spacing.md,
+    borderRadius: radii.md,
+    borderWidth: 1.5,
+    borderColor: colors.pine,
+    borderStyle: 'dashed',
+    backgroundColor: 'transparent',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.xs,
+    minWidth: 70,
+  },
+  vehicleAddText: {
+    color: colors.pine,
+    fontSize: 12,
+    fontWeight: '700',
   },
   tabRail: {
     paddingHorizontal: spacing.lg,
@@ -1653,6 +1747,26 @@ const styles = StyleSheet.create({
     flex: 1,
     color: colors.graphite,
     fontSize: 13,
+  },
+  mapFailedBox: {
+    flex: 1,
+    gap: spacing.sm,
+    alignItems: 'flex-start',
+  },
+  mapFallbackButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.xs,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    borderRadius: radii.pill,
+    borderWidth: 1,
+    borderColor: colors.pine,
+  },
+  mapFallbackButtonText: {
+    color: colors.pine,
+    fontSize: 13,
+    fontWeight: '700',
   },
   linkButton: {
     marginTop: spacing.sm,
