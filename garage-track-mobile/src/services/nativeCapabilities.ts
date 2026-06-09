@@ -105,6 +105,52 @@ export async function ensureMaintenanceNotificationChannel() {
   }
 }
 
+export async function scheduleHealthNotifications(
+  items: Array<{ label: string; status: string; nextDueDate?: string }>,
+): Promise<void> {
+  const Notif = loadNotifications();
+  if (!Notif) return;
+
+  await ensureMaintenanceNotificationChannel();
+  const permission = await Notif.requestPermissionsAsync();
+  if (!permission.granted) return;
+
+  // Cancela notificações de manutenção anteriores para não duplicar
+  const scheduled = await Notif.getAllScheduledNotificationsAsync();
+  await Promise.all(
+    scheduled
+      .filter((n) => (n.content.data as Record<string, unknown>)?.['type'] === 'maintenance-alert')
+      .map((n) => Notif!.cancelScheduledNotificationAsync(n.identifier)),
+  );
+
+  for (const item of items) {
+    if (item.status === 'overdue') {
+      await Notif.scheduleNotificationAsync({
+        content: {
+          title: `Manutenção vencida: ${item.label}`,
+          body: 'Este item precisa de atenção imediata.',
+          data: { screen: 'health', type: 'maintenance-alert' },
+        },
+        trigger: null,
+      });
+    } else if (item.status === 'attention' && item.nextDueDate) {
+      const triggerDate = new Date(`${item.nextDueDate}T09:00:00`);
+      triggerDate.setDate(triggerDate.getDate() - 1);
+      if (triggerDate > new Date()) {
+        await Notif.scheduleNotificationAsync({
+          content: {
+            title: `${item.label} vence amanhã`,
+            body: 'Agende a revisão para não perder o prazo.',
+            data: { screen: 'health', type: 'maintenance-alert' },
+          },
+          // eslint-disable-next-line @typescript-eslint/no-explicit-any
+          trigger: { type: 'date', date: triggerDate } as any,
+        });
+      }
+    }
+  }
+}
+
 export async function scheduleImmediateReviewNotification(title: string, body: string) {
   const Notif = loadNotifications();
   if (!Notif) {

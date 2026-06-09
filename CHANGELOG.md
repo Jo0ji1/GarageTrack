@@ -4,7 +4,24 @@ Todas as mudanças notáveis serão documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
+
+## [1.4.0] — 2026-06-09
 ### Adicionado
+- **Notificações agendadas de alertas**: ao abrir o app, `scheduleHealthNotifications` cancela notificações antigas e reagenda uma notificação imediata para itens `overdue` e uma para o dia anterior ao vencimento para itens `attention`.
+- **Atualização rápida de quilometragem**: tocar no card "Quilometragem" no Dashboard abre um mini-modal com campo numérico para atualizar o odômetro sem precisar entrar no formulário completo do veículo.
+- **Dashboard de gastos por categoria**: a tela Saúde exibe um gráfico de barras horizontais com os valores gastos por categoria, ordenados por custo decrescente.
+- **Busca no histórico**: campo de texto com ícone de lupa e botão limpar (X) filtra registros por título, notas ou marca da peça em tempo real.
+- **Modal de detalhes de registro**: clicar em qualquer item do histórico abre um `Modal` fullscreen (pageSheet) com data, km, custo, categoria, notas, peça/produto, oficina, checklist, reprodução de áudio (play/pause via `useAudioPlayer`) e foto.
+- **Ícones de anexo no histórico**: items com foto ou áudio exibem ícones de câmera/microfone na linha da lista.
+
+### Corrigido
+- **Date value out of bounds** (crash no startup após sync): `toDate()` agora normaliza timestamps ISO completos para `YYYY-MM-DD`; `applyRemoteData` faz `.slice(0,10)` em `performed_at` antes de gravar em `service_date`.
+
+### Alterado
+- **Versão 1.4.0** em `app.config.js`.
+- **~15 acentos restaurados** na UI: "Olá", "saúde", "pré-viagem", "áudio", "evidências", "geográfica", "Não foi possível", "migrações", "distância", "Título", "Comentário", "própria", "quilômetros", "crítico", "únicas", etc.
+- `StatCard` aceita prop opcional `onPress` (renderiza `Pressable` com indicador de edição quando presente).
+
 - **Sync bidirecional**: o "Sincronizar agora" agora também aplica os dados recebidos da nuvem no SQLite local (`applyRemoteData` em `useGarageTrack`), fazendo merge de veículos (mantém a maior quilometragem) e registros de manutenção. Antes o pull baixava os dados mas não os persistia localmente.
 - **CRUD de veículos**: usuário pode adicionar, editar e excluir veículos diretamente no app (`VehicleFormScreen`). Alertas de manutenção são criados automaticamente ao adicionar um veículo. Botão "Novo" e ícone de edição no seletor de veículos.
 - **Problema → Navegação pós-envio**: após salvar um relato de problema, o app oferece ligar ou navegar até a oficina selecionada (via `Linking`).

@@ -5,6 +5,7 @@ import {
   Image,
   KeyboardAvoidingView,
   Linking,
+  Modal,
   Platform,
   Pressable,
   ScrollView,
@@ -32,19 +33,25 @@ import {
   Mic,
   Navigation,
   Pencil,
+  Play,
   PlusCircle,
   Route,
   Save,
   Search,
   Settings as SettingsIcon,
   ShieldCheck,
+  Square as StopIcon,
+  TrendingUp,
   Wrench,
+  X,
 } from 'lucide-react-native';
 import MapView, { Marker, PROVIDER_DEFAULT, PROVIDER_GOOGLE } from 'react-native-maps';
 import {
   AudioModule,
   RecordingPresets,
   setAudioModeAsync,
+  useAudioPlayer,
+  useAudioPlayerStatus,
   useAudioRecorder,
   useAudioRecorderState,
 } from 'expo-audio';
@@ -74,6 +81,7 @@ import {
   captureServicePhoto,
   getCurrentGarageLocation,
   pickServicePhoto,
+  scheduleHealthNotifications,
   scheduleImmediateReviewNotification,
 } from '../services/nativeCapabilities';
 import { searchNearbyWorkshops, type NearbyWorkshop } from '../services/workshopsApi';
@@ -117,12 +125,22 @@ export function GarageTrackApp() {
     }
   }, [selectedVehicleId, vehicles]);
 
+  useEffect(() => {
+    if (!snapshot) return;
+    const sv = snapshot.vehicles.find((v) => v.id === selectedVehicleId) ?? snapshot.vehicles[0];
+    if (!sv) return;
+    const h = buildVehicleHealth(sv, snapshot.maintenanceRecords, snapshot.alertPreferences);
+    scheduleHealthNotifications(
+      h.items.map((i) => ({ label: i.categoryLabel, status: i.status, nextDueDate: i.nextDueDate })),
+    ).catch(() => {});
+  }, [selectedVehicleId, snapshot]);
+
   if (isLoading || !snapshot || !vehicles[0]) {
-    return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migracoes e carregando seu histórico." />;
+    return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migrações e carregando seu histórico." />;
   }
 
   if (error) {
-    return <StateScreen title="Nao foi possível carregar" description={error} tone="danger" />;
+    return <StateScreen title="Não foi possível carregar" description={error} tone="danger" />;
   }
 
   const garage = snapshot;
@@ -171,6 +189,20 @@ export function GarageTrackApp() {
     setVehicleToEdit(null);
     setActiveScreen('dashboard');
     await deleteVehicle(deletedId);
+  }
+
+  async function handleQuickKmUpdate(newMileage: number) {
+    await updateVehicle(selectedVehicle.id, {
+      type: selectedVehicle.type,
+      name: selectedVehicle.name,
+      brand: selectedVehicle.brand,
+      model: selectedVehicle.model,
+      year: selectedVehicle.year,
+      plate: selectedVehicle.plate,
+      currentMileage: newMileage,
+      weeklyMileage: selectedVehicle.weeklyMileage,
+      vin: selectedVehicle.vin,
+    });
   }
 
   function renderScreen() {
@@ -229,6 +261,7 @@ export function GarageTrackApp() {
             totalSpentCents={health.totalSpentCents}
             nextItem={health.nextCriticalItem}
             onNavigate={setActiveScreen}
+            onUpdateMileage={handleQuickKmUpdate}
           />
         );
     }
@@ -389,6 +422,7 @@ function DashboardScreen({
   totalSpentCents,
   nextItem,
   onNavigate,
+  onUpdateMileage,
 }: Readonly<{
   userName: string;
   vehicle: Vehicle;
@@ -396,14 +430,58 @@ function DashboardScreen({
   totalSpentCents: number;
   nextItem?: ReturnType<typeof buildVehicleHealth>['nextCriticalItem'];
   onNavigate: (screen: ScreenKey) => void;
+  onUpdateMileage: (km: number) => Promise<void>;
 }>) {
   const lastRecord = records[0];
+  const [showKmModal, setShowKmModal] = useState(false);
+  const [kmDraft, setKmDraft] = useState(String(vehicle.currentMileage));
+  const [savingKm, setSavingKm] = useState(false);
+
+  async function submitKmUpdate() {
+    const parsed = Number(kmDraft.replace(/\D/g, ''));
+    if (!parsed || parsed < vehicle.currentMileage) {
+      Alert.alert('Quilometragem inválida', `Informe um valor ≥ ${vehicle.currentMileage.toLocaleString('pt-BR')} km.`);
+      return;
+    }
+    setSavingKm(true);
+    try {
+      await onUpdateMileage(parsed);
+      setShowKmModal(false);
+    } finally {
+      setSavingKm(false);
+    }
+  }
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
+      <Modal visible={showKmModal} transparent animationType="fade" onRequestClose={() => setShowKmModal(false)}>
+        <Pressable style={styles.kmModalOverlay} onPress={() => setShowKmModal(false)}>
+          <Pressable style={styles.kmModalBox} onPress={() => {}}>
+            <Text style={styles.sectionHeading}>Atualizar quilometragem</Text>
+            <Text style={styles.cardText}>Informe a leitura atual do odômetro.</Text>
+            <TextInput
+              style={styles.input}
+              value={kmDraft}
+              onChangeText={setKmDraft}
+              keyboardType="numeric"
+              autoFocus
+              selectTextOnFocus
+              placeholder={String(vehicle.currentMileage)}
+              placeholderTextColor="#9A9387"
+            />
+            <PrimaryButton
+              Icon={Save}
+              label={savingKm ? 'Salvando...' : 'Salvar'}
+              onPress={submitKmUpdate}
+              disabled={savingKm}
+            />
+          </Pressable>
+        </Pressable>
+      </Modal>
+
       <View style={styles.heroPanel}>
         <View style={styles.heroCopy}>
-          <Text style={styles.eyebrow}>Ola, {userName.split(' ')[0]}</Text>
+          <Text style={styles.eyebrow}>Olá, {userName.split(' ')[0]}</Text>
           <Text style={styles.heroTitle}>{vehicle.name}</Text>
           <Text style={styles.heroMeta}>{vehicle.brand} {vehicle.model} • {vehicle.year} • {vehicle.plate}</Text>
         </View>
@@ -411,23 +489,28 @@ function DashboardScreen({
       </View>
 
       <View style={styles.statGrid}>
-        <StatCard Icon={Gauge} label="Quilometragem" value={`${vehicle.currentMileage.toLocaleString('pt-BR')} km`} />
+        <StatCard
+          Icon={Gauge}
+          label="Quilometragem"
+          value={`${vehicle.currentMileage.toLocaleString('pt-BR')} km`}
+          onPress={() => { setKmDraft(String(vehicle.currentMileage)); setShowKmModal(true); }}
+        />
         <StatCard Icon={CircleDollarSign} label="Total gasto" value={formatCurrency(totalSpentCents)} />
         <StatCard Icon={CalendarClock} label="Último serviço" value={formatShortDate(lastRecord?.serviceDate)} />
         <StatCard Icon={Bell} label="Próximo alerta" value={nextItem?.categoryLabel ?? 'Sem alerta'} />
       </View>
 
       <View style={styles.actionGrid}>
-        <ActionCard Icon={Wrench} title="Registrar manutenção" description="Salve data, oficina, custo, midia e local." onPress={() => onNavigate('new')} />
-        <ActionCard Icon={Route} title="Modo pre-viagem" description="Cruze vencimentos com a distancia planejada." onPress={() => onNavigate('trip')} />
+        <ActionCard Icon={Wrench} title="Registrar manutenção" description="Salve data, oficina, custo, mídia e local." onPress={() => onNavigate('new')} />
+        <ActionCard Icon={Route} title="Modo pré-viagem" description="Cruze vencimentos com a distância planejada." onPress={() => onNavigate('trip')} />
       </View>
 
-      <SectionTitle title="Prioridade técnica" action="ver saude" onPress={() => onNavigate('health')} />
+      <SectionTitle title="Prioridade técnica" action="ver saúde" onPress={() => onNavigate('health')} />
       <View style={styles.priorityCard}>
         <View style={styles.priorityIcon}>{statusIcon(nextItem?.status ?? 'ok')}</View>
         <View style={styles.flexOne}>
-          <Text style={styles.cardTitle}>{nextItem?.categoryLabel ?? 'Nenhum item critico'}</Text>
-          <Text style={styles.cardText}>{nextItem?.reason ?? 'As categorias acompanhadas estao dentro das regras configuradas.'}</Text>
+          <Text style={styles.cardTitle}>{nextItem?.categoryLabel ?? 'Nenhum item crítico'}</Text>
+          <Text style={styles.cardText}>{nextItem?.reason ?? 'As categorias acompanhadas estão dentro das regras configuradas.'}</Text>
           {nextItem?.nextDueDate ? <Text style={styles.cardMeta}>Vence em {formatShortDate(nextItem.nextDueDate)} ou {nextItem.nextDueMileage?.toLocaleString('pt-BR')} km</Text> : null}
         </View>
       </View>
@@ -440,11 +523,12 @@ function HealthScreen({ vehicle, records, preferences }: Readonly<{ vehicle: Veh
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={ShieldCheck} title="Painel de saude" description="Status por categoria considerando tempo, quilometragem media semanal e antecedência configurada." />
+      <SectionHero Icon={ShieldCheck} title="Painel de saúde" description="Status por categoria considerando tempo, quilometragem média semanal e antecedência configurada." />
       <View style={styles.statGrid}>
         <StatCard Icon={CircleDollarSign} label="Investimento" value={formatCurrency(health.totalSpentCents)} />
-        <StatCard Icon={CalendarClock} label="Última revisao" value={formatShortDate(health.lastServiceDate)} />
+        <StatCard Icon={CalendarClock} label="Última revisão" value={formatShortDate(health.lastServiceDate)} />
       </View>
+      <CostByCategoryChart records={records} vehicleType={vehicle.type} />
       {health.items.map((item) => (
         <View key={item.categoryId} style={styles.healthRow}>
           <View style={styles.healthRowHeader}>
@@ -607,7 +691,7 @@ function MaintenanceFormScreen({
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.flexOne}>
       <ScrollView contentContainerStyle={styles.screenContent} keyboardShouldPersistTaps="handled">
-        <SectionHero Icon={Wrench} title="Registrar nova manutenção" description="O registro salva histórico, checklist contextual, oficina, local, foto e audio em uma unica entrada." />
+        <SectionHero Icon={Wrench} title="Registrar nova manutenção" description="O registro salva histórico, checklist contextual, oficina, local, foto e áudio em uma única entrada." />
 
         <Text style={styles.fieldLabel}>Categoria</Text>
         <View style={styles.chipGrid}>
@@ -623,7 +707,7 @@ function MaintenanceFormScreen({
         </View>
 
         <View style={styles.formCard}>
-          <Input label="Titulo do serviço" value={title} onChangeText={setTitle} placeholder={getCategoryDefinition(categoryId).label} />
+          <Input label="Título do serviço" value={title} onChangeText={setTitle} placeholder={getCategoryDefinition(categoryId).label} />
           <View style={styles.inputRow}>
             <Input label="Data" value={serviceDate} onChangeText={setServiceDate} placeholder="2026-05-25" />
             <Input label="Km" value={mileage} onChangeText={setMileage} keyboardType="numeric" />
@@ -668,7 +752,7 @@ function MaintenanceFormScreen({
         </View>
 
         {photoUri ? <Image source={{ uri: photoUri }} style={styles.photoPreview} /> : null}
-        {audioUri ? <Text style={styles.cardMeta}>Audio anexado: {audioUri.split('/').pop()}</Text> : null}
+        {audioUri ? <Text style={styles.cardMeta}>Áudio anexado: {audioUri.split('/').pop()}</Text> : null}
 
         <PrimaryButton Icon={Save} label={isSaving ? 'Salvando...' : 'Salvar manutenção'} onPress={submit} disabled={isSaving} />
       </ScrollView>
@@ -679,13 +763,42 @@ function MaintenanceFormScreen({
 function HistoryScreen({ vehicle, records, workshops }: Readonly<{ vehicle: Vehicle; records: MaintenanceRecord[]; workshops: Workshop[] }>) {
   const categories = getCategoriesForVehicle(vehicle.type);
   const [filter, setFilter] = useState<MaintenanceCategoryId | 'all'>('all');
-  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(records[0]?.id ?? null);
-  const filteredRecords = filter === 'all' ? records : records.filter((record) => record.categoryId === filter);
-  const selectedRecord = records.find((record) => record.id === selectedRecordId) ?? filteredRecords[0];
+  const [search, setSearch] = useState('');
+  const [selectedRecordId, setSelectedRecordId] = useState<string | null>(null);
+
+  const lowerSearch = search.toLowerCase().trim();
+  const filteredRecords = records.filter((record) => {
+    const matchCat = filter === 'all' || record.categoryId === filter;
+    const matchSearch =
+      !lowerSearch ||
+      record.title.toLowerCase().includes(lowerSearch) ||
+      record.notes.toLowerCase().includes(lowerSearch) ||
+      (record.parts.brand ?? '').toLowerCase().includes(lowerSearch);
+    return matchCat && matchSearch;
+  });
+
+  const selectedRecord = records.find((r) => r.id === selectedRecordId) ?? null;
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={History} title="Histórico técnico" description="Consulte registros por categoria, veja peças usadas, custos, oficina e evidencias anexadas." />
+      <SectionHero Icon={History} title="Histórico técnico" description="Consulte registros por categoria, pesquise por texto e veja evidências e mídias anexadas." />
+
+      <View style={styles.searchBox}>
+        <Search size={16} color={colors.graphite} />
+        <TextInput
+          style={styles.searchInput}
+          value={search}
+          onChangeText={setSearch}
+          placeholder="Buscar por título, notas ou marca..."
+          placeholderTextColor="#9A9387"
+        />
+        {search.length > 0 ? (
+          <Pressable onPress={() => setSearch('')} hitSlop={8} accessibilityLabel="Limpar busca">
+            <X size={16} color={colors.graphite} />
+          </Pressable>
+        ) : null}
+      </View>
+
       <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.chipRail}>
         <Pressable style={[styles.selectChip, filter === 'all' && styles.selectChipSelected]} onPress={() => setFilter('all')}>
           <Text style={[styles.selectChipText, filter === 'all' && styles.selectChipTextSelected]}>Todos</Text>
@@ -697,8 +810,12 @@ function HistoryScreen({ vehicle, records, workshops }: Readonly<{ vehicle: Vehi
         ))}
       </ScrollView>
 
+      {filteredRecords.length === 0 ? (
+        <Text style={styles.cardMeta}>Nenhum registro encontrado.</Text>
+      ) : null}
+
       {filteredRecords.map((record) => (
-        <Pressable key={record.id} style={[styles.historyItem, selectedRecord?.id === record.id && styles.historyItemSelected]} onPress={() => setSelectedRecordId(record.id)}>
+        <Pressable key={record.id} style={styles.historyItem} onPress={() => setSelectedRecordId(record.id)}>
           <View style={styles.historyDateBox}>
             <Text style={styles.historyDateDay}>{record.serviceDate.slice(8, 10)}</Text>
             <Text style={styles.historyDateMonth}>{record.serviceDate.slice(5, 7)}</Text>
@@ -707,24 +824,21 @@ function HistoryScreen({ vehicle, records, workshops }: Readonly<{ vehicle: Vehi
             <Text style={styles.cardTitle}>{record.title}</Text>
             <Text style={styles.cardMeta}>{getCategoryDefinition(record.categoryId).label} • {record.mileage.toLocaleString('pt-BR')} km • {formatCurrency(record.costCents)}</Text>
           </View>
+          {(record.photoUri || record.audioUri) ? (
+            <View style={styles.historyAttachBadge}>
+              {record.photoUri ? <Camera size={13} color={colors.graphite} /> : null}
+              {record.audioUri ? <Mic size={13} color={colors.graphite} /> : null}
+            </View>
+          ) : null}
         </Pressable>
       ))}
 
       {selectedRecord ? (
-        <View style={styles.detailCard}>
-          <Text style={styles.sectionHeading}>Detalhe da manutenção</Text>
-          <Text style={styles.detailTitle}>{selectedRecord.title}</Text>
-          <Text style={styles.cardText}>{selectedRecord.notes || 'Sem notas adicionais.'}</Text>
-          <Text style={styles.cardMeta}>Oficina: {workshops.find((workshop) => workshop.id === selectedRecord.workshopId)?.name ?? 'Nao informada'}</Text>
-          <Text style={styles.cardMeta}>Produto: {selectedRecord.parts.brand || 'Nao informado'} {selectedRecord.parts.specification || ''}</Text>
-          {selectedRecord.checklist.map((item) => (
-            <View key={`${selectedRecord.id}-${item.label}`} style={styles.checklistLine}>
-              <CheckCircle2 size={16} color={colors.pine} />
-              <Text style={styles.cardText}>{item.label}: {item.value || 'OK'}</Text>
-            </View>
-          ))}
-          {selectedRecord.photoUri ? <Image source={{ uri: selectedRecord.photoUri }} style={styles.photoPreview} /> : null}
-        </View>
+        <RecordDetailModal
+          record={selectedRecord}
+          workshop={workshops.find((w) => w.id === selectedRecord.workshopId)}
+          onClose={() => setSelectedRecordId(null)}
+        />
       ) : null}
     </ScrollView>
   );
@@ -808,7 +922,7 @@ function ServiceMapScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={MapPin} title="Mapa de serviços" description="Veja onde cada manutenção foi feita e mantenha uma memória geografica das oficinas confiaveis." />
+      <SectionHero Icon={MapPin} title="Mapa de serviços" description="Veja onde cada manutenção foi feita e mantenha uma memória geográfica das oficinas confiáveis." />
       <View style={styles.mapCard}>
         <MapView
           style={styles.map}
@@ -858,7 +972,7 @@ function ServiceMapScreen({
             {mapFailed ? (
               <View style={styles.mapFailedBox}>
                 <Text style={styles.mapOverlayText}>
-                  {'O mapa do Google nao carregou. Verifique se a API "Maps SDK for Android" esta ativa no Google Cloud Console.'}
+                  {'O mapa do Google não carregou. Verifique se a API "Maps SDK for Android" está ativa no Google Cloud Console.'}
                 </Text>
                 <Pressable style={styles.mapFallbackButton} onPress={() => openInExternalMaps(firstLocation?.latitude ?? -5.7945, firstLocation?.longitude ?? -35.211)}>
                   <Navigation size={15} color={colors.pine} />
@@ -947,7 +1061,7 @@ function ServiceMapScreen({
           ))}
         </ScrollView>
         <Input label="Nota" value={rating} onChangeText={setRating} keyboardType="numeric" />
-        <Input label="Comentario" value={reviewText} onChangeText={setReviewText} multiline placeholder="Atendimento, prazo, qualidade técnica..." />
+        <Input label="Comentário" value={reviewText} onChangeText={setReviewText} multiline placeholder="Atendimento, prazo, qualidade técnica..." />
         <PrimaryButton Icon={Save} label="Salvar avaliação" onPress={submitReview} />
       </View>
     </ScrollView>
@@ -961,9 +1075,9 @@ function PreTripScreen({ vehicle, records, preferences }: Readonly<{ vehicle: Ve
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={Route} title="Modo pre-viagem" description="Informe a distancia estimada e o app cruza a viagem com vencimentos por data e quilometragem." />
+      <SectionHero Icon={Route} title="Modo pré-viagem" description="Informe a distância estimada e o app cruza a viagem com vencimentos por data e quilometragem." />
       <View style={styles.formCard}>
-        <Input label="Distancia prevista (km)" value={tripKm} onChangeText={setTripKm} keyboardType="numeric" />
+        <Input label="Distância prevista (km)" value={tripKm} onChangeText={setTripKm} keyboardType="numeric" />
         <View style={[styles.tripBanner, blocked ? styles.tripBannerDanger : styles.tripBannerOk]}>
           {blocked ? <AlertTriangle color={colors.danger} size={20} /> : <Navigation color={colors.pine} size={20} />}
           <Text style={styles.tripBannerText}>{blocked ? 'Resolva itens vencidos antes de sair.' : 'Viagem liberada com os cuidados indicados abaixo.'}</Text>
@@ -996,7 +1110,7 @@ function AlertsScreen({
 
   return (
     <ScrollView contentContainerStyle={styles.screenContent}>
-      <SectionHero Icon={Bell} title="Configurar alertas" description="Cada categoria tem intervalo técnico e antecedência propria em dias e quilometros." />
+      <SectionHero Icon={Bell} title="Configurar alertas" description="Cada categoria tem intervalo técnico e antecedência própria em dias e quilômetros." />
       {vehiclePreferences.map((preference) => {
         const category = getCategoryDefinition(preference.categoryId);
         return (
@@ -1068,7 +1182,19 @@ function SectionTitle({ title, action, onPress }: Readonly<{ title: string; acti
   );
 }
 
-function StatCard({ Icon, label, value }: Readonly<{ Icon: IconComponent; label: string; value: string }>) {
+function StatCard({ Icon, label, value, onPress }: Readonly<{ Icon: IconComponent; label: string; value: string; onPress?: () => void }>) {
+  if (onPress) {
+    return (
+      <Pressable style={[styles.statCard, styles.statCardPressable]} onPress={onPress} accessibilityRole="button" accessibilityLabel={`${label}: ${value}. Toque para editar`}>
+        <View style={styles.statCardTop}>
+          <Icon size={19} color={colors.sky} />
+          <Pencil size={11} color={colors.graphiteLight} />
+        </View>
+        <Text style={styles.statLabel}>{label}</Text>
+        <Text style={styles.statValue}>{value}</Text>
+      </Pressable>
+    );
+  }
   return (
     <View style={styles.statCard}>
       <Icon size={19} color={colors.sky} />
@@ -1094,6 +1220,145 @@ function NativeButton({ Icon, label, onPress, active }: Readonly<{ Icon: IconCom
       <Icon size={18} color={active ? colors.paper : colors.pine} />
       <Text style={[styles.nativeButtonText, active && styles.nativeButtonTextActive]}>{label}</Text>
     </Pressable>
+  );
+}
+
+function RecordDetailModal({
+  record,
+  workshop,
+  onClose,
+}: Readonly<{
+  record: MaintenanceRecord;
+  workshop?: Workshop;
+  onClose: () => void;
+}>) {
+  const player = useAudioPlayer(record.audioUri ?? null);
+  const playerStatus = useAudioPlayerStatus(player);
+
+  return (
+    <Modal visible animationType="slide" presentationStyle="pageSheet" onRequestClose={onClose}>
+      <View style={styles.detailModal}>
+        <View style={styles.detailModalHeader}>
+          <Text style={styles.detailModalTitle} numberOfLines={2}>{record.title}</Text>
+          <Pressable onPress={onClose} style={styles.detailModalClose} accessibilityLabel="Fechar detalhes">
+            <X size={20} color={colors.ink} />
+          </Pressable>
+        </View>
+        <ScrollView contentContainerStyle={styles.detailModalContent}>
+          <View style={styles.statGrid}>
+            <StatCard Icon={CalendarClock} label="Data" value={formatShortDate(record.serviceDate)} />
+            <StatCard Icon={Gauge} label="Quilometragem" value={`${record.mileage.toLocaleString('pt-BR')} km`} />
+            <StatCard Icon={CircleDollarSign} label="Custo" value={formatCurrency(record.costCents)} />
+            <StatCard Icon={ShieldCheck} label="Categoria" value={getCategoryDefinition(record.categoryId).label} />
+          </View>
+
+          {record.notes ? (
+            <View style={styles.formCard}>
+              <Text style={styles.cardTitle}>Notas técnicas</Text>
+              <Text style={styles.cardText}>{record.notes}</Text>
+            </View>
+          ) : null}
+
+          {(record.parts.brand || record.parts.specification) ? (
+            <View style={styles.formCard}>
+              <Text style={styles.cardTitle}>Peça / Produto</Text>
+              {record.parts.brand ? <Text style={styles.cardText}>Marca: {record.parts.brand}</Text> : null}
+              {record.parts.specification ? <Text style={styles.cardText}>Especificação: {record.parts.specification}</Text> : null}
+            </View>
+          ) : null}
+
+          {workshop ? (
+            <View style={styles.formCard}>
+              <Text style={styles.cardTitle}>Oficina</Text>
+              <Text style={styles.cardText}>{workshop.name}</Text>
+              {workshop.address ? <Text style={styles.cardMeta}>{workshop.address}</Text> : null}
+            </View>
+          ) : null}
+
+          {record.checklist.length > 0 ? (
+            <View style={styles.formCard}>
+              <Text style={styles.cardTitle}>Checklist</Text>
+              {record.checklist.map((item) => (
+                <View key={`${record.id}-ck-${item.label}`} style={styles.checklistLine}>
+                  <CheckCircle2 size={15} color={colors.pine} />
+                  <Text style={styles.cardText}>{item.label}: {item.value || 'OK'}</Text>
+                </View>
+              ))}
+            </View>
+          ) : null}
+
+          {record.audioUri ? (
+            <View style={styles.formCard}>
+              <Text style={styles.cardTitle}>Áudio anexado</Text>
+              <Pressable
+                style={styles.primaryButton}
+                onPress={() => { playerStatus.playing ? player.pause() : player.play(); }}
+              >
+                {playerStatus.playing
+                  ? <StopIcon size={18} color={colors.paper} />
+                  : <Play size={18} color={colors.paper} />}
+                <Text style={styles.primaryButtonText}>
+                  {playerStatus.playing ? 'Pausar' : 'Reproduzir áudio'}
+                </Text>
+              </Pressable>
+            </View>
+          ) : null}
+
+          {record.photoUri ? (
+            <Image source={{ uri: record.photoUri }} style={styles.photoPreview} />
+          ) : null}
+        </ScrollView>
+      </View>
+    </Modal>
+  );
+}
+
+function CostByCategoryChart({
+  records,
+  vehicleType,
+}: Readonly<{ records: MaintenanceRecord[]; vehicleType: Vehicle['type'] }>) {
+  const categories = getCategoriesForVehicle(vehicleType);
+  const totals = categories
+    .map((cat) => ({
+      id: cat.id,
+      label: cat.label,
+      total: records.filter((r) => r.categoryId === cat.id).reduce((sum, r) => sum + r.costCents, 0),
+    }))
+    .filter((c) => c.total > 0)
+    .sort((a, b) => b.total - a.total);
+
+  if (totals.length === 0) {
+    return (
+      <View style={styles.formCard}>
+        <View style={styles.healthRowHeader}>
+          <Text style={styles.cardTitle}>Gastos por categoria</Text>
+          <TrendingUp size={18} color={colors.sky} />
+        </View>
+        <Text style={styles.cardText}>Nenhum registro com custo informado ainda.</Text>
+      </View>
+    );
+  }
+
+  const max = totals[0].total;
+
+  return (
+    <View style={styles.formCard}>
+      <View style={styles.healthRowHeader}>
+        <Text style={styles.cardTitle}>Gastos por categoria</Text>
+        <TrendingUp size={18} color={colors.sky} />
+      </View>
+      {totals.map((cat) => (
+        <View key={cat.id} style={styles.costBarRow}>
+          <View style={styles.costBarLabelRow}>
+            <Text style={styles.costBarLabel}>{cat.label}</Text>
+            <Text style={styles.costBarValue}>{formatCurrency(cat.total)}</Text>
+          </View>
+          <View style={styles.costBarTrack}>
+            <View style={[styles.costBarFill, { width: `${Math.round((cat.total / max) * 100)}%` }]} />
+          </View>
+        </View>
+      ))}
+    </View>
   );
 }
 
@@ -1806,6 +2071,124 @@ const styles = StyleSheet.create({
     color: colors.ink,
     fontStyle: 'italic',
     lineHeight: 20,
+  },
+  // ── km update modal ──
+  kmModalOverlay: {
+    flex: 1,
+    backgroundColor: 'rgba(24, 34, 29, 0.55)',
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: spacing.xl,
+  },
+  kmModalBox: {
+    width: '100%',
+    backgroundColor: colors.paper,
+    borderRadius: radii.lg,
+    padding: spacing.xl,
+    gap: spacing.md,
+    ...shadow,
+  },
+  // ── record detail modal ──
+  detailModal: {
+    flex: 1,
+    backgroundColor: colors.cream,
+  },
+  detailModalHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingHorizontal: spacing.lg,
+    paddingTop: spacing.xl,
+    paddingBottom: spacing.md,
+    borderBottomWidth: 1,
+    borderBottomColor: colors.border,
+    backgroundColor: colors.paper,
+    gap: spacing.md,
+  },
+  detailModalTitle: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 18,
+    fontWeight: '900',
+    fontFamily: baseFont,
+  },
+  detailModalClose: {
+    width: 40,
+    height: 40,
+    borderRadius: radii.md,
+    backgroundColor: colors.surfaceAlt,
+    borderWidth: 1,
+    borderColor: colors.border,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  detailModalContent: {
+    padding: spacing.lg,
+    paddingBottom: 56,
+    gap: spacing.lg,
+  },
+  // ── cost chart ──
+  costBarRow: {
+    gap: spacing.xs,
+  },
+  costBarLabelRow: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+  },
+  costBarLabel: {
+    color: colors.ink,
+    fontWeight: '700',
+    fontSize: 13,
+  },
+  costBarValue: {
+    color: colors.graphite,
+    fontSize: 12,
+    fontWeight: '700',
+  },
+  costBarTrack: {
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.border,
+    overflow: 'hidden',
+  },
+  costBarFill: {
+    height: 8,
+    borderRadius: radii.pill,
+    backgroundColor: colors.pine,
+  },
+  // ── history search ──
+  searchBox: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: spacing.sm,
+    backgroundColor: colors.paper,
+    borderWidth: 1,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm,
+    minHeight: layout.inputHeight,
+  },
+  searchInput: {
+    flex: 1,
+    color: colors.ink,
+    fontSize: 14,
+  },
+  historyAttachBadge: {
+    flexDirection: 'row',
+    gap: spacing.xs,
+    alignItems: 'center',
+    paddingLeft: spacing.sm,
+  },
+  // ── stat card pressable ──
+  statCardTop: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+  },
+  statCardPressable: {
+    borderStyle: 'dashed',
+    borderColor: colors.pine,
   },
   tripBanner: {
     borderRadius: radii.md,
