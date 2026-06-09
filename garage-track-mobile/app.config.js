@@ -3,6 +3,8 @@
 require('dotenv').config();
 
 const googleMapsKey = process.env.EXPO_PUBLIC_GOOGLE_MAPS_ANDROID_KEY || '';
+const googleOAuthWebClientId = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_WEB_CLIENT_ID || '';
+const googleOAuthAndroidClientId = process.env.EXPO_PUBLIC_GOOGLE_OAUTH_ANDROID_CLIENT_ID || '';
 
 /** @type {import('expo/config').ExpoConfig} */
 module.exports = ({ config }) => ({
@@ -78,6 +80,7 @@ module.exports = ({ config }) => ({
     ],
     'expo-secure-store',
     'expo-sharing',
+    'expo-web-browser',
   ],
   extra: {
     eas: {

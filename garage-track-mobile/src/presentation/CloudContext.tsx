@@ -4,6 +4,7 @@ import {
   type SyncReport,
   getCurrentUser,
   signInWithEmail,
+  signInWithGoogle,
   signOut,
   signUpWithEmail,
   syncAll,
@@ -20,6 +21,7 @@ interface CloudContextValue {
   lastSync: SyncReport | null;
   lastError: string | null;
   signIn: (email: string, password: string) => Promise<void>;
+  signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
   sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<SyncReport>;
@@ -84,6 +86,24 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     }
   }, [refreshUser]);
 
+  const handleSignInWithGoogle = useCallback(async () => {
+    setStatus('loading');
+    setLastError(null);
+    try {
+      await signInWithGoogle();
+      // onAuthStateChange do Supabase atualiza o user automaticamente;
+      // chamamos refreshUser como fallback de segurança.
+      await refreshUser();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'falha no login Google';
+      // "Login cancelado" não é um erro que deve aparecer como lastError.
+      if (msg !== 'Login cancelado.') setLastError(msg);
+      throw err;
+    } finally {
+      setStatus('idle');
+    }
+  }, [refreshUser]);
+
   const handleSignUp = useCallback(async (email: string, password: string, displayName?: string) => {
     setStatus('loading');
     setLastError(null);
@@ -134,11 +154,12 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     lastSync,
     lastError,
     signIn: handleSignIn,
+    signInWithGoogle: handleSignInWithGoogle,
     signUp: handleSignUp,
     signOut: handleSignOut,
     sync: handleSync,
     refreshUser,
-  }), [user, status, lastSync, lastError, handleSignIn, handleSignUp, handleSignOut, handleSync, refreshUser]);
+  }), [user, status, lastSync, lastError, handleSignIn, handleSignInWithGoogle, handleSignUp, handleSignOut, handleSync, refreshUser]);
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>;
 }

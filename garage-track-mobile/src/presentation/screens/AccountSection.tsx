@@ -23,6 +23,7 @@ export function AccountSection({ vehicles, records, applyRemoteData }: Readonly<
   const [password, setPassword] = useState('');
   const [displayName, setDisplayName] = useState('');
   const [busy, setBusy] = useState(false);
+  const [googleBusy, setGoogleBusy] = useState(false);
 
   if (!cloud.configured) {
     return (
@@ -61,6 +62,20 @@ export function AccountSection({ vehicles, records, applyRemoteData }: Readonly<
       Alert.alert('Falha', err instanceof Error ? err.message : 'Erro inesperado.');
     } finally {
       setBusy(false);
+    }
+  }
+
+  async function handleGoogleSignIn() {
+    setGoogleBusy(true);
+    try {
+      await cloud.signInWithGoogle();
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Erro inesperado.';
+      if (msg !== 'Login cancelado.') {
+        Alert.alert('Falha no login Google', msg);
+      }
+    } finally {
+      setGoogleBusy(false);
     }
   }
 
@@ -191,6 +206,29 @@ export function AccountSection({ vehicles, records, applyRemoteData }: Readonly<
         </Text>
       </Pressable>
 
+      <View style={styles.dividerRow}>
+        <View style={styles.dividerLine} />
+        <Text style={styles.dividerText}>ou</Text>
+        <View style={styles.dividerLine} />
+      </View>
+
+      <Pressable
+        style={[styles.googleButton, googleBusy && { opacity: 0.6 }]}
+        disabled={googleBusy}
+        onPress={handleGoogleSignIn}
+      >
+        {googleBusy ? (
+          <ActivityIndicator color={palette.ink} size="small" />
+        ) : (
+          <View style={styles.googleIcon}>
+            <Text style={styles.googleIconText}>G</Text>
+          </View>
+        )}
+        <Text style={styles.googleButtonText}>
+          {googleBusy ? 'Abrindo…' : 'Continuar com Google'}
+        </Text>
+      </Pressable>
+
       {cloud.lastError ? <Text style={styles.error}>{cloud.lastError}</Text> : null}
     </View>
   );
@@ -236,6 +274,24 @@ function makeStyles(p: ReturnType<typeof useTheme>['palette']) {
       borderWidth: 1, borderColor: p.danger, backgroundColor: 'transparent',
     },
     secondaryButtonText: { ...typography.bodyStrong },
+    dividerRow: {
+      flexDirection: 'row', alignItems: 'center', gap: spacing.sm,
+    },
+    dividerLine: { flex: 1, height: 1, backgroundColor: p.border },
+    dividerText: { ...typography.caption, color: p.graphite },
+    googleButton: {
+      minHeight: 50, borderRadius: radii.md,
+      borderWidth: 1, borderColor: p.border,
+      backgroundColor: p.paper,
+      flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm,
+    },
+    googleIcon: {
+      width: 22, height: 22, borderRadius: 11,
+      backgroundColor: '#4285F4',
+      alignItems: 'center', justifyContent: 'center',
+    },
+    googleIconText: { color: '#FFF', fontWeight: '800', fontSize: 13 },
+    googleButtonText: { ...typography.bodyStrong, color: p.ink, fontSize: 15 },
     error: { ...typography.body, color: p.danger },
   });
 }

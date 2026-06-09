@@ -1,5 +1,10 @@
 import { supabase, isSupabaseConfigured } from './supabaseClient';
 import type { MaintenanceRecord, Vehicle } from '../domain/models';
+import * as WebBrowser from 'expo-web-browser';
+import { makeRedirectUri } from 'expo-auth-session';
+
+// Permite ao WebBrowser completar a sessão OAuth no Expo Go / standalone.
+WebBrowser.maybeCompleteAuthSession();
 
 /**
  * Sincronização offline-first.
@@ -62,6 +67,47 @@ export async function signUpWithEmail(email: string, password: string, displayNa
 export async function signOut() {
   if (!supabase) return;
   await supabase.auth.signOut();
+}
+
+/**
+ * Login com Google via Supabase OAuth + WebBrowser.
+ * Fluxo: abre browser nativo → Google autentica → redireciona para
+ * garagetrack://auth/callback → Supabase troca o code por sessão.
+ *
+ * Pré-requisito (Supabase dashboard):
+ *   Authentication → Providers → Google → habilitar
+ *   Client ID = Web OAuth Client ID
+ *   Client Secret = Web OAuth Client Secret
+ *   Redirect URL permitida = garagetrack://auth/callback
+ */
+export async function signInWithGoogle(): Promise<void> {
+  if (!supabase) throw new Error('Supabase não configurado');
+
+  const redirectTo = makeRedirectUri({ scheme: 'garagetrack', path: 'auth/callback' });
+
+  const { data, error } = await supabase.auth.signInWithOAuth({
+    provider: 'google',
+    options: {
+      redirectTo,
+      skipBrowserRedirect: true,
+      queryParams: { access_type: 'offline', prompt: 'select_account' },
+    },
+  });
+
+  if (error) throw new Error(describeSupabaseError(error, 'iniciar login com Google'));
+  if (!data.url) throw new Error('Não foi possível obter a URL de autenticação Google.');
+
+  const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+
+  if (result.type === 'cancel' || result.type === 'dismiss') {
+    throw new Error('Login cancelado.');
+  }
+  if (result.type === 'success' && result.url) {
+    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
+    if (exchangeError) {
+      throw new Error(describeSupabaseError(exchangeError, 'concluir login com Google'));
+    }
+  }
 }
 
 export async function getCurrentUser(): Promise<CloudUser | null> {
