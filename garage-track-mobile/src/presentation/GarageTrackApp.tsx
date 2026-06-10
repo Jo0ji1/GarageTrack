@@ -110,11 +110,12 @@ const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
 export function GarageTrackApp() {
   const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData, addVehicle, updateVehicle, deleteVehicle } = useGarageTrack();
   const { userName: authUserName } = useAuth();
-  const { user, sync, triggerAutoSync } = useCloud();
+  const { user, triggerAutoSync } = useCloud();
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
   const didMountRef = useRef(false);
+  const hasPendingLocalMutationRef = useRef(false);
 
   const vehicles = snapshot?.vehicles ?? [];
 
@@ -145,17 +146,25 @@ export function GarageTrackApp() {
       didMountRef.current = true;
       return;
     }
-    triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
+    if (!hasPendingLocalMutationRef.current) return;
+    hasPendingLocalMutationRef.current = false;
+    triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords, {
+      priority: 'normal',
+      reason: 'local-mutation',
+    });
   }, [snapshot, user, triggerAutoSync]);
 
   useEffect(() => {
     const sub = AppState.addEventListener('change', (nextState) => {
       if ((nextState === 'background' || nextState === 'inactive') && snapshot && user) {
-        sync(snapshot.vehicles, snapshot.maintenanceRecords).catch(() => {});
+        triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords, {
+          priority: 'high',
+          reason: 'app-background',
+        });
       }
     });
     return () => sub.remove();
-  }, [snapshot, user, sync]);
+  }, [snapshot, user, triggerAutoSync]);
 
   if (isLoading || !snapshot || !vehicles[0]) {
     return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migrações e carregando seu histórico." />;
@@ -191,16 +200,19 @@ export function GarageTrackApp() {
       photoUri: input.photoUri,
       audioUri: input.audioUri,
     });
+    hasPendingLocalMutationRef.current = true;
   }
 
   async function handleAddVehicle(draft: VehicleDraft) {
     await addVehicle(draft);
+    hasPendingLocalMutationRef.current = true;
     setActiveScreen('dashboard');
   }
 
   async function handleUpdateVehicle(draft: VehicleDraft) {
     if (!vehicleToEdit) return;
     await updateVehicle(vehicleToEdit.id, draft);
+    hasPendingLocalMutationRef.current = true;
     setVehicleToEdit(null);
     setActiveScreen('dashboard');
   }
@@ -211,6 +223,7 @@ export function GarageTrackApp() {
     setVehicleToEdit(null);
     setActiveScreen('dashboard');
     await deleteVehicle(deletedId);
+    hasPendingLocalMutationRef.current = true;
   }
 
   async function handleQuickKmUpdate(newMileage: number) {
@@ -225,19 +238,23 @@ export function GarageTrackApp() {
       weeklyMileage: selectedVehicle.weeklyMileage,
       vin: selectedVehicle.vin,
     });
+    hasPendingLocalMutationRef.current = true;
   }
 
   async function handleAddMaintenance(input: MaintenanceDraft): Promise<string> {
     const id = await addMaintenance(input);
+    hasPendingLocalMutationRef.current = true;
     return id;
   }
 
   async function handleUpdateAlertPreference(preference: AlertPreference) {
     await updateAlertPreference(preference);
+    hasPendingLocalMutationRef.current = true;
   }
 
   async function handleAddWorkshopReview(workshopId: string, rating: number, comment: string) {
     await addWorkshopReview(workshopId, rating, comment);
+    hasPendingLocalMutationRef.current = true;
   }
 
   function renderScreen() {

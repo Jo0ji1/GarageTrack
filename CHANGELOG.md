@@ -5,6 +5,15 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.4] — 2026-06-10
+### Corrigido
+- **Auto-sync inconsistente após múltiplas ações rápidas**: mudanças locais podiam ficar para trás e só refletirem após novas ações manuais. Agora o sync usa fila persistida em memória com reprocessamento automático quando há alterações durante um sync em andamento.
+
+### Alterado
+- **Janela de acumulação (debounce) ajustada para 3s**: alterações consecutivas são agrupadas para reduzir spam no banco e manter comportamento dinâmico.
+- **Prioridade de sync**: eventos críticos (app indo para background/inactive) disparam flush imediato da fila.
+- **Retry automático de fila**: em falha de rede/API, o último payload permanece enfileirado e tenta novamente após 5s.
+
 ## [1.4.3] — 2026-06-10
 ### Corrigido
 - **Falha de sincronização entre contas diferentes** [42501]: IDs locais (`veh-*`, `mnt-*`) eram globais no Supabase e colidiam entre usuários no `upsert` por `id`, acionando caminho de update bloqueado por RLS. O sync agora usa IDs escopados por usuário na nuvem (`{userId}::{localId}`), eliminando colisões cross-account sem alterar os IDs locais.

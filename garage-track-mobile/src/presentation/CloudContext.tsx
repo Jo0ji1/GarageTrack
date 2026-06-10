@@ -14,6 +14,7 @@ import { isSupabaseConfigured, supabase } from '../services/supabaseClient';
 import type { MaintenanceRecord, Vehicle } from '../domain/models';
 
 type Status = 'idle' | 'loading' | 'syncing' | 'error';
+type SyncPriority = 'normal' | 'high';
 
 interface CloudContextValue {
   configured: boolean;
@@ -27,8 +28,12 @@ interface CloudContextValue {
   signOut: () => Promise<void>;
   sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<SyncReport>;
   refreshUser: () => Promise<void>;
-  /** Callback para disparar sync automático após mutações locais (se ENABLE_AUTO_SYNC=true) */
-  triggerAutoSync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => void;
+  /** Enfileira sync automático com debounce e suporte a prioridade. */
+  triggerAutoSync: (
+    vehicles: Vehicle[],
+    records: MaintenanceRecord[],
+    options?: { priority?: SyncPriority; reason?: string },
+  ) => void;
 }
 
 const CloudContext = createContext<CloudContextValue | null>(null);
@@ -39,7 +44,10 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
   const [lastSync, setLastSync] = useState<SyncReport | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
   const autoSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
-  const pendingSyncRef = useRef<{ vehicles: Vehicle[]; records: MaintenanceRecord[] } | null>(null);
+  const retryTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const queuedPayloadRef = useRef<{ vehicles: Vehicle[]; records: MaintenanceRecord[] } | null>(null);
+  const hasQueuedSyncRef = useRef(false);
+  const rerunAfterCurrentSyncRef = useRef(false);
   const isSyncingRef = useRef(false);
 
   const refreshUser = useCallback(async () => {
@@ -159,37 +167,90 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     }
   }, [user, lastSync]);
 
-  const triggerAutoSync = useCallback((vehicles: Vehicle[], records: MaintenanceRecord[]) => {
+  const clearAutoTimers = useCallback(() => {
+    if (autoSyncTimerRef.current) {
+      clearTimeout(autoSyncTimerRef.current);
+      autoSyncTimerRef.current = null;
+    }
+    if (retryTimerRef.current) {
+      clearTimeout(retryTimerRef.current);
+      retryTimerRef.current = null;
+    }
+  }, []);
+
+  const flushQueuedSync = useCallback(async () => {
     if (!ENABLE_AUTO_SYNC || !user) return;
-    // Debounce curto: deixa o app responsivo sem gerar tempestade de requests.
-    pendingSyncRef.current = { vehicles, records };
+    if (!hasQueuedSyncRef.current || !queuedPayloadRef.current) return;
+
+    if (isSyncingRef.current) {
+      rerunAfterCurrentSyncRef.current = true;
+      return;
+    }
+
+    const payload = queuedPayloadRef.current;
+    hasQueuedSyncRef.current = false;
+
+    try {
+      await handleSync(payload.vehicles, payload.records);
+    } catch {
+      // Mantém o último snapshot na fila e tenta novamente em poucos segundos.
+      hasQueuedSyncRef.current = true;
+      if (!retryTimerRef.current) {
+        retryTimerRef.current = setTimeout(() => {
+          retryTimerRef.current = null;
+          void flushQueuedSync();
+        }, 5000);
+      }
+      return;
+    }
+
+    if (rerunAfterCurrentSyncRef.current || hasQueuedSyncRef.current) {
+      rerunAfterCurrentSyncRef.current = false;
+      void flushQueuedSync();
+    }
+  }, [user, handleSync]);
+
+  const triggerAutoSync = useCallback((
+    vehicles: Vehicle[],
+    records: MaintenanceRecord[],
+    options?: { priority?: SyncPriority; reason?: string },
+  ) => {
+    if (!ENABLE_AUTO_SYNC || !user) return;
+    queuedPayloadRef.current = { vehicles, records };
+    hasQueuedSyncRef.current = true;
+
+    const priority = options?.priority ?? 'normal';
+    if (__DEV__) {
+      console.log(`[CloudContext] Auto-sync enfileirado (${priority})${options?.reason ? `: ${options.reason}` : ''}`);
+    }
+
+    if (priority === 'high') {
+      clearAutoTimers();
+      void flushQueuedSync();
+      return;
+    }
+
     if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current);
     autoSyncTimerRef.current = setTimeout(() => {
-      const pending = pendingSyncRef.current;
-      if (pending && !isSyncingRef.current) {
-        if (__DEV__) console.log('[CloudContext] Auto-sync disparado.');
-        handleSync(pending.vehicles, pending.records).catch((err) => {
-          if (__DEV__) console.error('[CloudContext] Auto-sync falhou:', err);
-        });
-      }
-      pendingSyncRef.current = null;
-    }, 700);
-  }, [user, handleSync]);
+      autoSyncTimerRef.current = null;
+      void flushQueuedSync();
+    }, 3000);
+  }, [user, flushQueuedSync, clearAutoTimers]);
 
   // Sync periódico (a cada 5 min) se ENABLE_AUTO_SYNC=true e logado
   useEffect(() => {
     if (!ENABLE_AUTO_SYNC || !user) return;
     const interval = setInterval(() => {
-      const pending = pendingSyncRef.current;
-      if (pending && !isSyncingRef.current) {
-        if (__DEV__) console.log('[CloudContext] Sync periódico disparado.');
-        handleSync(pending.vehicles, pending.records).catch((err) => {
-          if (__DEV__) console.error('[CloudContext] Sync periódico falhou:', err);
-        });
+      if (hasQueuedSyncRef.current) {
+        if (__DEV__) console.log('[CloudContext] Sync periódico da fila disparado.');
+        void flushQueuedSync();
       }
     }, 5 * 60 * 1000); // 5 minutos
-    return () => clearInterval(interval);
-  }, [user, handleSync]);
+    return () => {
+      clearInterval(interval);
+      clearAutoTimers();
+    };
+  }, [user, flushQueuedSync, clearAutoTimers]);
 
   const value = useMemo<CloudContextValue>(() => ({
     configured: isSupabaseConfigured,
