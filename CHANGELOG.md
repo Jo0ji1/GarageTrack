@@ -5,6 +5,16 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.3] — 2026-06-10
+### Corrigido
+- **Falha de sincronização entre contas diferentes** [42501]: IDs locais (`veh-*`, `mnt-*`) eram globais no Supabase e colidiam entre usuários no `upsert` por `id`, acionando caminho de update bloqueado por RLS. O sync agora usa IDs escopados por usuário na nuvem (`{userId}::{localId}`), eliminando colisões cross-account sem alterar os IDs locais.
+- **Auto-sync com snapshot antigo**: gatilhos nas mutações podiam enviar estado anterior ao `refresh`, atrasando reflexo no banco e forçando sync manual.
+
+### Alterado
+- **Auto-sync reativo por mudança de snapshot**: `GarageTrackApp` agora dispara auto-sync quando o snapshot local atualizado muda.
+- **Flush ao ir para background/inactive**: ao minimizar/fechar app, dispara tentativa imediata de sync para reduzir risco de perda de dados.
+- **Debounce do auto-sync reduzido**: de 3s para 700ms para comportamento mais dinâmico.
+
 ## [1.4.2] — 2026-06-10
 ### Corrigido
 - **RLS policy blocking INSERT** [42501]: policies com `for all` estavam bloqueando inserção de veículos durante sync. Agora cada operação (SELECT, INSERT, UPDATE, DELETE) tem policy específica. INSERT só valida `WITH CHECK`, não `USING`. ⚠️ **Requer migration no Supabase** (ver `supabase/migrations/20260610000300_fix_rls_policies.sql`).

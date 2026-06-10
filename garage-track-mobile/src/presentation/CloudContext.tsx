@@ -161,7 +161,7 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
 
   const triggerAutoSync = useCallback((vehicles: Vehicle[], records: MaintenanceRecord[]) => {
     if (!ENABLE_AUTO_SYNC || !user) return;
-    // Debounce: acumula a última versão dos dados e faz sync após 3s de inatividade
+    // Debounce curto: deixa o app responsivo sem gerar tempestade de requests.
     pendingSyncRef.current = { vehicles, records };
     if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current);
     autoSyncTimerRef.current = setTimeout(() => {
@@ -173,7 +173,7 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
         });
       }
       pendingSyncRef.current = null;
-    }, 3000);
+    }, 700);
   }, [user, handleSync]);
 
   // Sync periódico (a cada 5 min) se ENABLE_AUTO_SYNC=true e logado

@@ -1,6 +1,7 @@
-import { useEffect, useState, type ComponentType } from 'react';
+import { useEffect, useRef, useState, type ComponentType } from 'react';
 import {
   ActivityIndicator,
+  AppState,
   Alert,
   Image,
   KeyboardAvoidingView,
@@ -109,10 +110,11 @@ const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
 export function GarageTrackApp() {
   const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData, addVehicle, updateVehicle, deleteVehicle } = useGarageTrack();
   const { userName: authUserName } = useAuth();
-  const { triggerAutoSync } = useCloud();
+  const { user, sync, triggerAutoSync } = useCloud();
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);
+  const didMountRef = useRef(false);
 
   const vehicles = snapshot?.vehicles ?? [];
 
@@ -136,6 +138,24 @@ export function GarageTrackApp() {
       h.items.map((i) => ({ label: i.categoryLabel, status: i.status, nextDueDate: i.nextDueDate })),
     ).catch(() => {});
   }, [selectedVehicleId, snapshot]);
+
+  useEffect(() => {
+    if (!snapshot || !user) return;
+    if (!didMountRef.current) {
+      didMountRef.current = true;
+      return;
+    }
+    triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
+  }, [snapshot, user, triggerAutoSync]);
+
+  useEffect(() => {
+    const sub = AppState.addEventListener('change', (nextState) => {
+      if ((nextState === 'background' || nextState === 'inactive') && snapshot && user) {
+        sync(snapshot.vehicles, snapshot.maintenanceRecords).catch(() => {});
+      }
+    });
+    return () => sub.remove();
+  }, [snapshot, user, sync]);
 
   if (isLoading || !snapshot || !vehicles[0]) {
     return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migrações e carregando seu histórico." />;
@@ -171,20 +191,16 @@ export function GarageTrackApp() {
       photoUri: input.photoUri,
       audioUri: input.audioUri,
     });
-    // Dispara sync automático se ENABLE_AUTO_SYNC=true
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
   }
 
   async function handleAddVehicle(draft: VehicleDraft) {
     await addVehicle(draft);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
     setActiveScreen('dashboard');
   }
 
   async function handleUpdateVehicle(draft: VehicleDraft) {
     if (!vehicleToEdit) return;
     await updateVehicle(vehicleToEdit.id, draft);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
     setVehicleToEdit(null);
     setActiveScreen('dashboard');
   }
@@ -195,7 +211,6 @@ export function GarageTrackApp() {
     setVehicleToEdit(null);
     setActiveScreen('dashboard');
     await deleteVehicle(deletedId);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
   }
 
   async function handleQuickKmUpdate(newMileage: number) {
@@ -210,23 +225,19 @@ export function GarageTrackApp() {
       weeklyMileage: selectedVehicle.weeklyMileage,
       vin: selectedVehicle.vin,
     });
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
   }
 
   async function handleAddMaintenance(input: MaintenanceDraft): Promise<string> {
     const id = await addMaintenance(input);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
     return id;
   }
 
   async function handleUpdateAlertPreference(preference: AlertPreference) {
     await updateAlertPreference(preference);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
   }
 
   async function handleAddWorkshopReview(workshopId: string, rating: number, comment: string) {
     await addWorkshopReview(workshopId, rating, comment);
-    if (snapshot) triggerAutoSync(snapshot.vehicles, snapshot.maintenanceRecords);
   }
 
   function renderScreen() {

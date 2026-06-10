@@ -28,6 +28,15 @@ export type CloudHealth =
   | { ok: true; user: CloudUser | null }
   | { ok: false; reason: string };
 
+function toScopedCloudId(userId: string, localId: string): string {
+  return `${userId}::${localId}`;
+}
+
+function fromScopedCloudId(userId: string, cloudId: string): string {
+  const prefix = `${userId}::`;
+  return cloudId.startsWith(prefix) ? cloudId.slice(prefix.length) : cloudId;
+}
+
 export async function pingCloud(): Promise<CloudHealth> {
   if (!isSupabaseConfigured || !supabase) {
     return { ok: false, reason: 'Supabase não configurado (.env ausente)' };
@@ -177,7 +186,7 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
   if (!user) throw new Error('Faça login para sincronizar');
   if (vehicles.length === 0) return { pushed: 0 };
   const rows = vehicles.map((v) => ({
-    id: v.id,
+    id: toScopedCloudId(user.id, v.id),
     user_id: user.id,
     name: v.name,
     type: v.type,
@@ -202,9 +211,9 @@ export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushe
   if (!user) throw new Error('Faça login para sincronizar');
   if (records.length === 0) return { pushed: 0 };
   const rows = records.map((r) => ({
-    id: r.id,
+    id: toScopedCloudId(user.id, r.id),
     user_id: user.id,
-    vehicle_id: r.vehicleId,
+    vehicle_id: toScopedCloudId(user.id, r.vehicleId),
     category_id: r.categoryId,
     title: r.title,
     description: r.notes ?? null,
@@ -254,7 +263,11 @@ export async function pullVehicles(): Promise<RemoteVehicle[]> {
     .select('id, name, type, plate, brand, model, year, current_mileage, image_uri')
     .eq('user_id', user.id);
   if (error) throw error;
-  return (data ?? []) as RemoteVehicle[];
+  const rows = (data ?? []) as RemoteVehicle[];
+  return rows.map((row) => ({
+    ...row,
+    id: fromScopedCloudId(user.id, row.id),
+  }));
 }
 
 export async function pullRecords(): Promise<RemoteRecord[]> {
@@ -267,7 +280,12 @@ export async function pullRecords(): Promise<RemoteRecord[]> {
     .eq('user_id', user.id)
     .order('performed_at', { ascending: false });
   if (error) throw error;
-  return (data ?? []) as RemoteRecord[];
+  const rows = (data ?? []) as RemoteRecord[];
+  return rows.map((row) => ({
+    ...row,
+    id: fromScopedCloudId(user.id, row.id),
+    vehicle_id: fromScopedCloudId(user.id, row.vehicle_id),
+  }));
 }
 
 export type SyncReport = {

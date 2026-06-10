@@ -11,7 +11,7 @@ module.exports = ({ config }) => ({
   ...config,
   name: 'GarageTrack',
   slug: 'garage-track-mobile',
-  version: '1.4.2',
+  version: '1.4.3',
   scheme: 'garagetrack',
   orientation: 'portrait',
   icon: './assets/icon.png',
