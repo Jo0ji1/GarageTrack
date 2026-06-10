@@ -11,7 +11,12 @@ WebBrowser.maybeCompleteAuthSession();
  * Local sempre é a verdade durante uso normal.
  * push() envia veículos + manutenções locais para Supabase (upsert).
  * pull() traz registros remotos e devolve para o caller mesclar.
+ *
+ * AUTO-SYNC: para habilitar sync automático após cada mutação local,
+ * defina ENABLE_AUTO_SYNC=true. Recomendado apenas para conexões estáveis.
  */
+
+export const ENABLE_AUTO_SYNC = false; // Mude para true para ativar sync automático
 
 export type CloudUser = {
   id: string;
@@ -79,6 +84,8 @@ export async function signOut() {
  *   Client ID = Web OAuth Client ID
  *   Client Secret = Web OAuth Client Secret
  *   Redirect URL permitida = garagetrack://auth/callback
+ *
+ * FIX para PKCE: extrair code e code_verifier da URL de retorno.
  */
 export async function signInWithGoogle(): Promise<void> {
   if (!supabase) throw new Error('Supabase não configurado');
@@ -103,9 +110,38 @@ export async function signInWithGoogle(): Promise<void> {
     throw new Error('Login cancelado.');
   }
   if (result.type === 'success' && result.url) {
-    const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(result.url);
-    if (exchangeError) {
-      throw new Error(describeSupabaseError(exchangeError, 'concluir login com Google'));
+    // Parse da URL de retorno: garagetrack://auth/callback#access_token=...&refresh_token=...
+    // OU garagetrack://auth/callback?code=...&state=...
+    const url = new URL(result.url);
+    
+    // PKCE flow: o Supabase retorna um 'code' nos query params
+    const code = url.searchParams.get('code');
+    
+    if (code) {
+      // Exchange code por session (PKCE)
+      const { error: exchangeError } = await supabase.auth.exchangeCodeForSession(code);
+      if (exchangeError) {
+        throw new Error(describeSupabaseError(exchangeError, 'concluir login com Google'));
+      }
+    } else {
+      // Implicit flow (menos seguro, mas pode acontecer em dev)
+      // Tenta extrair tokens do fragment
+      const fragment = url.hash.slice(1);
+      const params = new URLSearchParams(fragment);
+      const accessToken = params.get('access_token');
+      const refreshToken = params.get('refresh_token');
+      
+      if (accessToken && refreshToken) {
+        const { error: setError } = await supabase.auth.setSession({
+          access_token: accessToken,
+          refresh_token: refreshToken,
+        });
+        if (setError) {
+          throw new Error(describeSupabaseError(setError, 'estabelecer sessão com Google'));
+        }
+      } else {
+        throw new Error('URL de retorno não contém code nem tokens. Verifique configuração OAuth no Supabase.');
+      }
     }
   }
 }

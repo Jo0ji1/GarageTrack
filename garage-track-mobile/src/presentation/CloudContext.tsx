@@ -1,6 +1,7 @@
-import React, { createContext, useCallback, useContext, useEffect, useMemo, useState } from 'react';
+import React, { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState } from 'react';
 import {
   type CloudUser,
+  ENABLE_AUTO_SYNC,
   type SyncReport,
   getCurrentUser,
   signInWithEmail,
@@ -26,6 +27,8 @@ interface CloudContextValue {
   signOut: () => Promise<void>;
   sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<SyncReport>;
   refreshUser: () => Promise<void>;
+  /** Callback para disparar sync automático após mutações locais (se ENABLE_AUTO_SYNC=true) */
+  triggerAutoSync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => void;
 }
 
 const CloudContext = createContext<CloudContextValue | null>(null);
@@ -35,6 +38,9 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
   const [status, setStatus] = useState<Status>('idle');
   const [lastSync, setLastSync] = useState<SyncReport | null>(null);
   const [lastError, setLastError] = useState<string | null>(null);
+  const autoSyncTimerRef = useRef<NodeJS.Timeout | null>(null);
+  const pendingSyncRef = useRef<{ vehicles: Vehicle[]; records: MaintenanceRecord[] } | null>(null);
+  const isSyncingRef = useRef(false);
 
   const refreshUser = useCallback(async () => {
     if (!isSupabaseConfigured) return;
@@ -132,8 +138,13 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     if (!user) {
       throw new Error('Faça login para sincronizar');
     }
+    if (isSyncingRef.current) {
+      if (__DEV__) console.log('[CloudContext] Sync já em andamento, ignorando.');
+      return lastSync ?? ({} as SyncReport);
+    }
     setStatus('syncing');
     setLastError(null);
+    isSyncingRef.current = true;
     try {
       const report = await syncAll(vehicles, records);
       setLastSync(report);
@@ -143,9 +154,42 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
       setStatus('error');
       throw err;
     } finally {
+      isSyncingRef.current = false;
       setStatus((s) => (s === 'error' ? 'error' : 'idle'));
     }
-  }, [user]);
+  }, [user, lastSync]);
+
+  const triggerAutoSync = useCallback((vehicles: Vehicle[], records: MaintenanceRecord[]) => {
+    if (!ENABLE_AUTO_SYNC || !user) return;
+    // Debounce: acumula a última versão dos dados e faz sync após 3s de inatividade
+    pendingSyncRef.current = { vehicles, records };
+    if (autoSyncTimerRef.current) clearTimeout(autoSyncTimerRef.current);
+    autoSyncTimerRef.current = setTimeout(() => {
+      const pending = pendingSyncRef.current;
+      if (pending && !isSyncingRef.current) {
+        if (__DEV__) console.log('[CloudContext] Auto-sync disparado.');
+        handleSync(pending.vehicles, pending.records).catch((err) => {
+          if (__DEV__) console.error('[CloudContext] Auto-sync falhou:', err);
+        });
+      }
+      pendingSyncRef.current = null;
+    }, 3000);
+  }, [user, handleSync]);
+
+  // Sync periódico (a cada 5 min) se ENABLE_AUTO_SYNC=true e logado
+  useEffect(() => {
+    if (!ENABLE_AUTO_SYNC || !user) return;
+    const interval = setInterval(() => {
+      const pending = pendingSyncRef.current;
+      if (pending && !isSyncingRef.current) {
+        if (__DEV__) console.log('[CloudContext] Sync periódico disparado.');
+        handleSync(pending.vehicles, pending.records).catch((err) => {
+          if (__DEV__) console.error('[CloudContext] Sync periódico falhou:', err);
+        });
+      }
+    }, 5 * 60 * 1000); // 5 minutos
+    return () => clearInterval(interval);
+  }, [user, handleSync]);
 
   const value = useMemo<CloudContextValue>(() => ({
     configured: isSupabaseConfigured,
@@ -159,7 +203,8 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     signOut: handleSignOut,
     sync: handleSync,
     refreshUser,
-  }), [user, status, lastSync, lastError, handleSignIn, handleSignInWithGoogle, handleSignUp, handleSignOut, handleSync, refreshUser]);
+    triggerAutoSync,
+  }), [user, status, lastSync, lastError, handleSignIn, handleSignInWithGoogle, handleSignUp, handleSignOut, handleSync, refreshUser, triggerAutoSync]);
 
   return <CloudContext.Provider value={value}>{children}</CloudContext.Provider>;
 }

@@ -5,6 +5,19 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.1] — 2026-06-10
+### Corrigido
+- **OAuth Google PKCE validation failed**: `signInWithGoogle` agora extrai corretamente o `code` da URL de retorno antes de chamar `exchangeCodeForSession(code)` — antes passava a URL inteira, causando erro "both auth code and code verifier should be non-empty [validation_failed]". Fallback para implicit flow (tokens no fragment) se code não vier. ⚠️ **BLOCKER resolvido.**
+
+### Adicionado
+- **Auto-sync opcional após mutações locais**: nova flag `ENABLE_AUTO_SYNC` (padrão: `false`) em `cloudSync.ts`. Quando `true`, `CloudContext` dispara sync automático 3s após cada mutação (addMaintenance, updateVehicle, etc.) com debounce, e sync periódico a cada 5 min se houver dados pendentes. Evita ter que clicar em "Sincronizar agora" manualmente. Recomendado apenas para redes estáveis (WiFi).
+- **Documentação de configuração de email**: criado `docs/EMAIL_CONFIRMATION.md` com guia completo para configurar SMTP customizado (Resend, SendGrid, etc.) e habilitar emails de confirmação de cadastro.
+- **Runbook de diagnóstico**: criado `docs/OAUTH_SYNC_FIX.md` com causa raiz, fix aplicado, checklist de config Supabase/Google Cloud, e testes de validação.
+
+### Alterado
+- **Wrappers de mutação em `GarageTrackApp`**: todas as funções que alteram dados locais (`handleAddMaintenance`, `handleUpdateVehicle`, `handleAddVehicle`, `handleDeleteVehicle`, `handleUpdateAlertPreference`, `handleAddWorkshopReview`) agora chamam `triggerAutoSync` (se `ENABLE_AUTO_SYNC=true` e usuário logado).
+- **Safe guards para `snapshot` null**: adicionadas verificações `if (snapshot)` antes de chamar `triggerAutoSync` para evitar crash em strict mode.
+
 ## [1.4.0] — 2026-06-09
 ### Adicionado
 - **Notificações agendadas de alertas**: ao abrir o app, `scheduleHealthNotifications` cancela notificações antigas e reagenda uma notificação imediata para itens `overdue` e uma para o dia anterior ao vencimento para itens `attention`.
