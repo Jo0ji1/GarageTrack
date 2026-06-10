@@ -16,7 +16,7 @@ WebBrowser.maybeCompleteAuthSession();
  * defina ENABLE_AUTO_SYNC=true. Recomendado apenas para conexões estáveis.
  */
 
-export const ENABLE_AUTO_SYNC = false; // Mude para true para ativar sync automático
+export const ENABLE_AUTO_SYNC = true; // Mude para true para ativar sync automático
 
 export type CloudUser = {
   id: string;
