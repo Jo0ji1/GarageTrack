@@ -5,6 +5,10 @@ Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
 
+## [1.4.2] — 2026-06-10
+### Corrigido
+- **RLS policy blocking INSERT** [42501]: policies com `for all` estavam bloqueando inserção de veículos durante sync. Agora cada operação (SELECT, INSERT, UPDATE, DELETE) tem policy específica. INSERT só valida `WITH CHECK`, não `USING`. ⚠️ **Requer migration no Supabase** (ver `supabase/migrations/20260610000300_fix_rls_policies.sql`).
+
 ## [1.4.1] — 2026-06-10
 ### Corrigido
 - **OAuth Google PKCE validation failed**: `signInWithGoogle` agora extrai corretamente o `code` da URL de retorno antes de chamar `exchangeCodeForSession(code)` — antes passava a URL inteira, causando erro "both auth code and code verifier should be non-empty [validation_failed]". Fallback para implicit flow (tokens no fragment) se code não vier. ⚠️ **BLOCKER resolvido.**
