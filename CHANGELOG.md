@@ -4,6 +4,11 @@ Todas as mudanças notáveis serão documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
+### Corrigido
+- **Ressurreição de dados após exclusão local**: o sync agora remove no Supabase os veículos e registros que foram apagados no SQLite local, evitando que itens excluídos reapareçam após pull.
+
+### Alterado
+- **Seed inicial para novos bancos locais**: reduzido para 1 veículo de referência (antes eram 2), diminuindo ruído em contas novas e no primeiro contato com a aplicação.
 
 ## [1.4.4] — 2026-06-10
 ### Corrigido

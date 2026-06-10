@@ -184,7 +184,6 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
   if (!supabase) throw new Error('Supabase não configurado');
   const user = await getCurrentUser();
   if (!user) throw new Error('Faça login para sincronizar');
-  if (vehicles.length === 0) return { pushed: 0 };
   const rows = vehicles.map((v) => ({
     id: toScopedCloudId(user.id, v.id),
     user_id: user.id,
@@ -197,11 +196,41 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
     current_mileage: v.currentMileage,
     image_uri: null,
   }));
-  const { error } = await supabase.from('vehicles').upsert(rows, { onConflict: 'id' });
-  if (error) {
-    if (__DEV__) console.error('[cloudSync] pushVehicles error:', error);
-    throw new Error(describeSupabaseError(error, 'enviar veículos'));
+
+  const localIds = new Set(rows.map((row) => row.id));
+  const { data: existingRows, error: existingError } = await supabase
+    .from('vehicles')
+    .select('id')
+    .eq('user_id', user.id);
+  if (existingError) {
+    if (__DEV__) console.error('[cloudSync] list vehicles error:', existingError);
+    throw new Error(describeSupabaseError(existingError, 'listar veículos remotos'));
   }
+
+  const idsToDelete = (existingRows ?? [])
+    .map((row) => row.id as string)
+    .filter((id) => !localIds.has(id));
+
+  if (idsToDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('vehicles')
+      .delete()
+      .eq('user_id', user.id)
+      .in('id', idsToDelete);
+    if (deleteError) {
+      if (__DEV__) console.error('[cloudSync] delete vehicles error:', deleteError);
+      throw new Error(describeSupabaseError(deleteError, 'remover veículos remotos'));
+    }
+  }
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from('vehicles').upsert(rows, { onConflict: 'id' });
+    if (error) {
+      if (__DEV__) console.error('[cloudSync] pushVehicles error:', error);
+      throw new Error(describeSupabaseError(error, 'enviar veículos'));
+    }
+  }
+
   return { pushed: rows.length };
 }
 
@@ -209,7 +238,6 @@ export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushe
   if (!supabase) throw new Error('Supabase não configurado');
   const user = await getCurrentUser();
   if (!user) throw new Error('Faça login para sincronizar');
-  if (records.length === 0) return { pushed: 0 };
   const rows = records.map((r) => ({
     id: toScopedCloudId(user.id, r.id),
     user_id: user.id,
@@ -222,11 +250,41 @@ export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushe
     performed_at: r.serviceDate,
     workshop_name: r.workshopId ?? null,
   }));
-  const { error } = await supabase.from('maintenance_records').upsert(rows, { onConflict: 'id' });
-  if (error) {
-    if (__DEV__) console.error('[cloudSync] pushRecords error:', error);
-    throw new Error(describeSupabaseError(error, 'enviar manutenções'));
+
+  const localIds = new Set(rows.map((row) => row.id));
+  const { data: existingRows, error: existingError } = await supabase
+    .from('maintenance_records')
+    .select('id')
+    .eq('user_id', user.id);
+  if (existingError) {
+    if (__DEV__) console.error('[cloudSync] list records error:', existingError);
+    throw new Error(describeSupabaseError(existingError, 'listar manutenções remotas'));
   }
+
+  const idsToDelete = (existingRows ?? [])
+    .map((row) => row.id as string)
+    .filter((id) => !localIds.has(id));
+
+  if (idsToDelete.length > 0) {
+    const { error: deleteError } = await supabase
+      .from('maintenance_records')
+      .delete()
+      .eq('user_id', user.id)
+      .in('id', idsToDelete);
+    if (deleteError) {
+      if (__DEV__) console.error('[cloudSync] delete records error:', deleteError);
+      throw new Error(describeSupabaseError(deleteError, 'remover manutenções remotas'));
+    }
+  }
+
+  if (rows.length > 0) {
+    const { error } = await supabase.from('maintenance_records').upsert(rows, { onConflict: 'id' });
+    if (error) {
+      if (__DEV__) console.error('[cloudSync] pushRecords error:', error);
+      throw new Error(describeSupabaseError(error, 'enviar manutenções'));
+    }
+  }
+
   return { pushed: rows.length };
 }
 
