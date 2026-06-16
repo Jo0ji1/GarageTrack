@@ -61,7 +61,7 @@ Documentação completa:
 - [x] v1.1 — Auth biométrica, backup criptografado, temas
 - [x] v1.2 — Busca real de oficinas via OSM, scripts Windows
 - [x] v1.3 — Conta na nuvem (Supabase) + login e-mail/senha + sync bidirecional
-- [ ] v1.4 — Login Google + APK público via EAS + auto-update OTA
+- [x] v1.4 — Login Google + APK público via EAS + auto-update OTA
 - [ ] v2.0 — iOS, widgets Android, integração calendário
 
 Veja [docs/ROADMAP.md](docs/ROADMAP.md) para o plano detalhado.
