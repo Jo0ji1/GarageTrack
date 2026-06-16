@@ -17,7 +17,7 @@ import {
   WorkshopReview,
   maintenanceCategories,
 } from '../domain/models';
-import type { RemoteRecord, RemoteVehicle } from '../services/cloudSync';
+import type { CloudUser, RemoteRecord, RemoteVehicle } from '../services/cloudSync';
 
 interface UserRow {
   id: string;
@@ -178,7 +178,23 @@ function mapWorkshopReview(row: WorkshopReviewRow): WorkshopReview {
   };
 }
 
-export function useGarageTrack() {
+function getActiveUserProfile(activeCloudUser: CloudUser | null) {
+  if (activeCloudUser) {
+    return {
+      id: activeCloudUser.id,
+      name: activeCloudUser.displayName?.trim() || activeCloudUser.email?.split('@')[0] || 'Usuário',
+      email: activeCloudUser.email?.trim() || `${activeCloudUser.id}@cloud.local`,
+    };
+  }
+
+  return {
+    id: 'user-demo',
+    name: 'Mariana Alves',
+    email: 'mariana@garagetrack.app',
+  };
+}
+
+export function useGarageTrack(activeCloudUser: CloudUser | null = null) {
   const db = useSQLiteContext();
   const [snapshot, setSnapshot] = useState<GarageSnapshot | null>(null);
   const [isLoading, setIsLoading] = useState(true);
@@ -189,18 +205,49 @@ export function useGarageTrack() {
     setError(null);
 
     try {
-      const userRow = await db.getFirstAsync<UserRow>('SELECT * FROM users LIMIT 1');
+      const activeProfile = getActiveUserProfile(activeCloudUser);
+      const now = new Date().toISOString();
+
+      await db.runAsync(
+        `INSERT OR IGNORE INTO users (id, name, email, created_at)
+         VALUES (?, ?, ?, ?)`,
+        [activeProfile.id, activeProfile.name, activeProfile.email, now],
+      );
+      await db.runAsync(
+        'UPDATE users SET name = ?, email = ? WHERE id = ?',
+        [activeProfile.name, activeProfile.email, activeProfile.id],
+      );
+
+      const userRow = await db.getFirstAsync<UserRow>('SELECT * FROM users WHERE id = ? LIMIT 1', [activeProfile.id]);
       if (!userRow) {
         throw new Error('Usuário inicial nao encontrado no banco local.');
       }
 
-      const vehicleRows = await db.getAllAsync<VehicleRow>('SELECT * FROM vehicles ORDER BY created_at ASC');
+      const vehicleRows = await db.getAllAsync<VehicleRow>(
+        'SELECT * FROM vehicles WHERE user_id = ? ORDER BY created_at ASC',
+        [activeProfile.id],
+      );
       const workshopRows = await db.getAllAsync<WorkshopRow>('SELECT * FROM workshops ORDER BY rating DESC');
       const maintenanceRows = await db.getAllAsync<MaintenanceRecordRow>(
-        'SELECT * FROM maintenance_records ORDER BY service_date DESC, created_at DESC',
+        `SELECT mr.*
+         FROM maintenance_records mr
+         JOIN vehicles v ON v.id = mr.vehicle_id
+         WHERE v.user_id = ?
+         ORDER BY mr.service_date DESC, mr.created_at DESC`,
+        [activeProfile.id],
       );
-      const alertRows = await db.getAllAsync<AlertPreferenceRow>('SELECT * FROM alert_preferences ORDER BY category_id ASC');
-      const reviewRows = await db.getAllAsync<WorkshopReviewRow>('SELECT * FROM workshop_reviews ORDER BY created_at DESC');
+      const alertRows = await db.getAllAsync<AlertPreferenceRow>(
+        `SELECT ap.*
+         FROM alert_preferences ap
+         JOIN vehicles v ON v.id = ap.vehicle_id
+         WHERE v.user_id = ?
+         ORDER BY ap.category_id ASC`,
+        [activeProfile.id],
+      );
+      const reviewRows = await db.getAllAsync<WorkshopReviewRow>(
+        'SELECT * FROM workshop_reviews WHERE user_id = ? ORDER BY created_at DESC',
+        [activeProfile.id],
+      );
 
       setSnapshot({
         user: mapUser(userRow),
@@ -346,11 +393,51 @@ export function useGarageTrack() {
       return;
     }
 
-    const userRow = await db.getFirstAsync<{ id: string }>('SELECT id FROM users LIMIT 1');
-    const localUserId = userRow?.id ?? 'user-demo';
+    const localUserId = getActiveUserProfile(activeCloudUser).id;
     const now = new Date().toISOString();
 
     await db.withTransactionAsync(async () => {
+      const remoteVehicleIds = remoteVehicles.map((v) => v.id);
+      const remoteRecordIds = remoteRecords.map((r) => r.id);
+
+      if (remoteRecordIds.length > 0) {
+        const placeholders = remoteRecordIds.map(() => '?').join(', ');
+        await db.runAsync(
+          `DELETE FROM maintenance_records
+           WHERE id IN (
+             SELECT mr.id
+             FROM maintenance_records mr
+             JOIN vehicles v ON v.id = mr.vehicle_id
+             WHERE v.user_id = ?
+           )
+           AND id NOT IN (${placeholders})`,
+          [localUserId, ...remoteRecordIds],
+        );
+      } else {
+        await db.runAsync(
+          `DELETE FROM maintenance_records
+           WHERE id IN (
+             SELECT mr.id
+             FROM maintenance_records mr
+             JOIN vehicles v ON v.id = mr.vehicle_id
+             WHERE v.user_id = ?
+           )`,
+          [localUserId],
+        );
+      }
+
+      if (remoteVehicleIds.length > 0) {
+        const placeholders = remoteVehicleIds.map(() => '?').join(', ');
+        await db.runAsync(
+          `DELETE FROM vehicles
+           WHERE user_id = ?
+             AND id NOT IN (${placeholders})`,
+          [localUserId, ...remoteVehicleIds],
+        );
+      } else {
+        await db.runAsync('DELETE FROM vehicles WHERE user_id = ?', [localUserId]);
+      }
+
       for (const v of remoteVehicles) {
         await db.runAsync(
           `INSERT INTO vehicles
@@ -408,7 +495,7 @@ export function useGarageTrack() {
 
   useEffect(() => {
     void refresh();
-  }, [db]);
+  }, [db, activeCloudUser?.id]);
 
   return {
     snapshot,

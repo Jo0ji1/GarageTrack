@@ -4,15 +4,21 @@ Todas as mudanças notáveis serão documentadas aqui.
 Formato baseado em [Keep a Changelog](https://keepachangelog.com/pt-BR/1.1.0/).
 
 ## [Unreleased]
+
+## [1.5.0] — 2026-06-16
 ### Corrigido
 - **Ressurreição de dados após exclusão local**: o sync agora remove no Supabase os veículos e registros que foram apagados no SQLite local, evitando que itens excluídos reapareçam após pull.
 - **Tela travada em "Preparando garagem" ao excluir todos os veículos**: o app agora trata garagem vazia com estado próprio e ações para criar novo veículo ou abrir configurações.
 
 ### Alterado
 - **Seed inicial para novos bancos locais**: reduzido para 1 veículo de referência (antes eram 2), diminuindo ruído em contas novas e no primeiro contato com a aplicação.
+- **Isolamento local por conta na nuvem**: leituras de veículos/manutenções/alertas/reviews agora são filtradas pelo usuário ativo (cloud user), evitando mistura de dados entre contas no mesmo dispositivo.
+- **Sync destrutivo com segurança**: deleções remotas só são aplicadas em fluxos automáticos de mutação local, reduzindo risco de apagar dados da nuvem em bootstrap manual de conta.
+- **Reconciliação completa do pull**: `applyRemoteData` passou a podar dados locais do usuário ativo que não existem mais no remoto, evitando sobras e inconsistências.
 
 ### Adicionado
 - Guia de apresentação para Gamma em `docs/ROTEIRO_APRESENTACAO_GAMMA.md`, com narrativa, estrutura de slides e perguntas para avaliação dos colegas.
+- Documento acadêmico final preenchido a partir do template: `docs/academico/Template_trabalho_20_dias.docx`.
 
 ## [1.4.4] — 2026-06-10
 ### Corrigido

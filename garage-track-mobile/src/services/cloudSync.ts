@@ -28,6 +28,14 @@ export type CloudHealth =
   | { ok: true; user: CloudUser | null }
   | { ok: false; reason: string };
 
+type PushOptions = {
+  allowRemoteDelete?: boolean;
+};
+
+type SyncOptions = {
+  allowRemoteDelete?: boolean;
+};
+
 function toScopedCloudId(userId: string, localId: string): string {
   return `${userId}::${localId}`;
 }
@@ -180,7 +188,10 @@ function describeSupabaseError(err: unknown, action: string): string {
   return `${joined}`;
 }
 
-export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: number }> {
+export async function pushVehicles(
+  vehicles: Vehicle[],
+  options?: PushOptions,
+): Promise<{ pushed: number }> {
   if (!supabase) throw new Error('Supabase não configurado');
   const user = await getCurrentUser();
   if (!user) throw new Error('Faça login para sincronizar');
@@ -197,29 +208,31 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
     image_uri: null,
   }));
 
-  const localIds = new Set(rows.map((row) => row.id));
-  const { data: existingRows, error: existingError } = await supabase
-    .from('vehicles')
-    .select('id')
-    .eq('user_id', user.id);
-  if (existingError) {
-    if (__DEV__) console.error('[cloudSync] list vehicles error:', existingError);
-    throw new Error(describeSupabaseError(existingError, 'listar veículos remotos'));
-  }
-
-  const idsToDelete = (existingRows ?? [])
-    .map((row) => row.id as string)
-    .filter((id) => !localIds.has(id));
-
-  if (idsToDelete.length > 0) {
-    const { error: deleteError } = await supabase
+  if (options?.allowRemoteDelete) {
+    const localIds = new Set(rows.map((row) => row.id));
+    const { data: existingRows, error: existingError } = await supabase
       .from('vehicles')
-      .delete()
-      .eq('user_id', user.id)
-      .in('id', idsToDelete);
-    if (deleteError) {
-      if (__DEV__) console.error('[cloudSync] delete vehicles error:', deleteError);
-      throw new Error(describeSupabaseError(deleteError, 'remover veículos remotos'));
+      .select('id')
+      .eq('user_id', user.id);
+    if (existingError) {
+      if (__DEV__) console.error('[cloudSync] list vehicles error:', existingError);
+      throw new Error(describeSupabaseError(existingError, 'listar veículos remotos'));
+    }
+
+    const idsToDelete = (existingRows ?? [])
+      .map((row) => row.id as string)
+      .filter((id) => !localIds.has(id));
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('vehicles')
+        .delete()
+        .eq('user_id', user.id)
+        .in('id', idsToDelete);
+      if (deleteError) {
+        if (__DEV__) console.error('[cloudSync] delete vehicles error:', deleteError);
+        throw new Error(describeSupabaseError(deleteError, 'remover veículos remotos'));
+      }
     }
   }
 
@@ -234,7 +247,10 @@ export async function pushVehicles(vehicles: Vehicle[]): Promise<{ pushed: numbe
   return { pushed: rows.length };
 }
 
-export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushed: number }> {
+export async function pushRecords(
+  records: MaintenanceRecord[],
+  options?: PushOptions,
+): Promise<{ pushed: number }> {
   if (!supabase) throw new Error('Supabase não configurado');
   const user = await getCurrentUser();
   if (!user) throw new Error('Faça login para sincronizar');
@@ -251,29 +267,31 @@ export async function pushRecords(records: MaintenanceRecord[]): Promise<{ pushe
     workshop_name: r.workshopId ?? null,
   }));
 
-  const localIds = new Set(rows.map((row) => row.id));
-  const { data: existingRows, error: existingError } = await supabase
-    .from('maintenance_records')
-    .select('id')
-    .eq('user_id', user.id);
-  if (existingError) {
-    if (__DEV__) console.error('[cloudSync] list records error:', existingError);
-    throw new Error(describeSupabaseError(existingError, 'listar manutenções remotas'));
-  }
-
-  const idsToDelete = (existingRows ?? [])
-    .map((row) => row.id as string)
-    .filter((id) => !localIds.has(id));
-
-  if (idsToDelete.length > 0) {
-    const { error: deleteError } = await supabase
+  if (options?.allowRemoteDelete) {
+    const localIds = new Set(rows.map((row) => row.id));
+    const { data: existingRows, error: existingError } = await supabase
       .from('maintenance_records')
-      .delete()
-      .eq('user_id', user.id)
-      .in('id', idsToDelete);
-    if (deleteError) {
-      if (__DEV__) console.error('[cloudSync] delete records error:', deleteError);
-      throw new Error(describeSupabaseError(deleteError, 'remover manutenções remotas'));
+      .select('id')
+      .eq('user_id', user.id);
+    if (existingError) {
+      if (__DEV__) console.error('[cloudSync] list records error:', existingError);
+      throw new Error(describeSupabaseError(existingError, 'listar manutenções remotas'));
+    }
+
+    const idsToDelete = (existingRows ?? [])
+      .map((row) => row.id as string)
+      .filter((id) => !localIds.has(id));
+
+    if (idsToDelete.length > 0) {
+      const { error: deleteError } = await supabase
+        .from('maintenance_records')
+        .delete()
+        .eq('user_id', user.id)
+        .in('id', idsToDelete);
+      if (deleteError) {
+        if (__DEV__) console.error('[cloudSync] delete records error:', deleteError);
+        throw new Error(describeSupabaseError(deleteError, 'remover manutenções remotas'));
+      }
     }
   }
 
@@ -360,11 +378,16 @@ export type SyncReport = {
 export async function syncAll(
   localVehicles: Vehicle[],
   localRecords: MaintenanceRecord[],
+  options?: SyncOptions,
 ): Promise<SyncReport> {
   const startedAt = new Date().toISOString();
   // Veículos devem ser inseridos antes dos registros (FK vehicle_id → vehicles.id).
-  const pv = await pushVehicles(localVehicles);
-  const pr = await pushRecords(localRecords);
+  const pv = await pushVehicles(localVehicles, {
+    allowRemoteDelete: options?.allowRemoteDelete === true,
+  });
+  const pr = await pushRecords(localRecords, {
+    allowRemoteDelete: options?.allowRemoteDelete === true,
+  });
   const [rv, rr] = await Promise.all([pullVehicles(), pullRecords()]);
   return {
     pushedVehicles: pv.pushed,

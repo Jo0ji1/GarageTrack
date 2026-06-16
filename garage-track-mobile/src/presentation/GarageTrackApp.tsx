@@ -108,9 +108,9 @@ const tabs: Array<{ key: ScreenKey; label: string; Icon: IconComponent }> = [
 ];
 
 export function GarageTrackApp() {
-  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData, addVehicle, updateVehicle, deleteVehicle } = useGarageTrack();
   const { userName: authUserName } = useAuth();
   const { user, triggerAutoSync } = useCloud();
+  const { snapshot, isLoading, error, addMaintenance, updateAlertPreference, addWorkshopReview, applyRemoteData, addVehicle, updateVehicle, deleteVehicle } = useGarageTrack(user);
   const [activeScreen, setActiveScreen] = useState<ScreenKey>('dashboard');
   const [selectedVehicleId, setSelectedVehicleId] = useState<string | null>(null);
   const [vehicleToEdit, setVehicleToEdit] = useState<Vehicle | null>(null);

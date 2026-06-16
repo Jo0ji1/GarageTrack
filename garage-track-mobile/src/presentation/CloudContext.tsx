@@ -26,7 +26,11 @@ interface CloudContextValue {
   signInWithGoogle: () => Promise<void>;
   signUp: (email: string, password: string, displayName?: string) => Promise<void>;
   signOut: () => Promise<void>;
-  sync: (vehicles: Vehicle[], records: MaintenanceRecord[]) => Promise<SyncReport>;
+  sync: (
+    vehicles: Vehicle[],
+    records: MaintenanceRecord[],
+    options?: { allowRemoteDelete?: boolean },
+  ) => Promise<SyncReport>;
   refreshUser: () => Promise<void>;
   /** Enfileira sync automático com debounce e suporte a prioridade. */
   triggerAutoSync: (
@@ -142,7 +146,11 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     }
   }, []);
 
-  const handleSync = useCallback(async (vehicles: Vehicle[], records: MaintenanceRecord[]) => {
+  const handleSync = useCallback(async (
+    vehicles: Vehicle[],
+    records: MaintenanceRecord[],
+    options?: { allowRemoteDelete?: boolean },
+  ) => {
     if (!user) {
       throw new Error('Faça login para sincronizar');
     }
@@ -154,7 +162,9 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     setLastError(null);
     isSyncingRef.current = true;
     try {
-      const report = await syncAll(vehicles, records);
+      const report = await syncAll(vehicles, records, {
+        allowRemoteDelete: options?.allowRemoteDelete === true,
+      });
       setLastSync(report);
       return report;
     } catch (err) {
@@ -191,7 +201,7 @@ export function CloudProvider({ children }: Readonly<{ children: React.ReactNode
     hasQueuedSyncRef.current = false;
 
     try {
-      await handleSync(payload.vehicles, payload.records);
+      await handleSync(payload.vehicles, payload.records, { allowRemoteDelete: true });
     } catch {
       // Mantém o último snapshot na fila e tenta novamente em poucos segundos.
       hasQueuedSyncRef.current = true;
