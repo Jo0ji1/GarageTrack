@@ -166,7 +166,7 @@ export function GarageTrackApp() {
     return () => sub.remove();
   }, [snapshot, user, triggerAutoSync]);
 
-  if (isLoading || !snapshot || !vehicles[0]) {
+  if (isLoading || !snapshot) {
     return <StateScreen title="Preparando garagem" description="Abrindo banco local, aplicando migrações e carregando seu histórico." />;
   }
 
@@ -176,6 +176,41 @@ export function GarageTrackApp() {
 
   const garage = snapshot;
   const displayUserName = authUserName || garage.user.name;
+
+  if (vehicles.length === 0) {
+    const isModalScreen = activeScreen === 'settings' || activeScreen === 'vehicle-form';
+    const modalTitle = activeScreen === 'settings' ? 'Configurações' : 'Novo veículo';
+
+    return (
+      <View style={styles.appShell}>
+        {isModalScreen ? (
+          <>
+            <ModalHeader title={modalTitle} onBack={() => { setVehicleToEdit(null); setActiveScreen('dashboard'); }} />
+            {activeScreen === 'settings' ? (
+              <SettingsScreen snapshot={garage} applyRemoteData={applyRemoteData} />
+            ) : (
+              <VehicleFormScreen
+                initialValues={undefined}
+                onSave={handleAddVehicle}
+              />
+            )}
+          </>
+        ) : (
+          <>
+            <AppHeader userName={displayUserName} vehicleCount={0} onOpenSettings={() => setActiveScreen('settings')} />
+            <EmptyGarageScreen
+              onCreateVehicle={() => {
+                setVehicleToEdit(null);
+                setActiveScreen('vehicle-form');
+              }}
+              onOpenSettings={() => setActiveScreen('settings')}
+            />
+          </>
+        )}
+      </View>
+    );
+  }
+
   const selectedVehicle = vehicles.find((vehicle) => vehicle.id === selectedVehicleId) ?? vehicles[0];
   const vehicleRecords = garage.maintenanceRecords.filter((record) => record.vehicleId === selectedVehicle.id);
   const health = buildVehicleHealth(selectedVehicle, garage.maintenanceRecords, garage.alertPreferences);
@@ -384,6 +419,33 @@ function StateScreen({ title, description, tone = 'default' }: Readonly<{ title:
       </View>
       <Text style={styles.stateTitle}>{title}</Text>
       <Text style={styles.stateDescription}>{description}</Text>
+    </View>
+  );
+}
+
+function EmptyGarageScreen({
+  onCreateVehicle,
+  onOpenSettings,
+}: Readonly<{
+  onCreateVehicle: () => void;
+  onOpenSettings: () => void;
+}>) {
+  return (
+    <View style={styles.stateScreen}>
+      <View style={styles.stateIcon}>
+        <Car color={colors.pine} size={30} />
+      </View>
+      <Text style={styles.stateTitle}>Sua garagem está vazia</Text>
+      <Text style={styles.stateDescription}>
+        Você removeu todos os veículos. Crie um novo para continuar registrando manutenções.
+      </Text>
+      <View style={styles.emptyStateActions}>
+        <PrimaryButton Icon={PlusCircle} label="Criar veículo" onPress={onCreateVehicle} />
+        <Pressable style={styles.secondaryButton} onPress={onOpenSettings}>
+          <SettingsIcon color={colors.pine} size={16} />
+          <Text style={styles.secondaryButtonText}>Abrir configurações</Text>
+        </Pressable>
+      </View>
     </View>
   );
 }
@@ -2337,5 +2399,26 @@ const styles = StyleSheet.create({
     color: colors.graphite,
     textAlign: 'center',
     lineHeight: 21,
+  },
+  emptyStateActions: {
+    width: '100%',
+    gap: spacing.sm,
+    marginTop: spacing.sm,
+  },
+  secondaryButton: {
+    minHeight: 52,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    borderColor: colors.pine,
+    backgroundColor: colors.paper,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    gap: spacing.sm,
+  },
+  secondaryButtonText: {
+    color: colors.pine,
+    fontWeight: '900',
+    fontSize: 15,
   },
 });
