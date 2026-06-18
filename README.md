@@ -4,7 +4,7 @@ Aplicativo mobile offline-first para gestão de manutenção veicular. O GarageT
 
 ## Tela inicial
 
-![Tela inicial do GarageTrack](docs/images/garage-track-home.svg)
+![Tela inicial do GarageTrack](docs/images/tela_inicial_garagetrack.jpeg)
 
 ## Sobre o projeto
 
