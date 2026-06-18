@@ -25,8 +25,8 @@ O GarageTrack foi desenvolvido para motoristas e motociclistas que precisam acom
 
 ## Integrantes
 
-- Integrante 1: preencher
-- Integrante 2: preencher
+- Integrante 1: George Carlos
+- Integrante 2: Lucas Vitor
 
 ## Funcionalidades principais
 
