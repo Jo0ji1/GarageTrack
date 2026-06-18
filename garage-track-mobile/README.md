@@ -2,6 +2,8 @@
 
 Aplicativo mobile **offline-first** para gestão inteligente de manutenção de carros e motos. Registra histórico técnico, custo, quilometragem, oficina, GPS, fotos, áudio, peças, checklist contextual e calcula alertas preventivos por data e quilometragem.
 
+> **Versão atual: 1.5.0** — isolamento por conta na nuvem, tratamento de garagem vazia, sync mais seguro e documentação finalizada para publicação.
+
 > **Versão 1.2** — adiciona busca de oficinas reais em tempo real via OpenStreetMap (Overpass API), modal de Configurações dedicado (sem switcher/tabs), chips de categoria em grid flex-wrap.
 >
 > **Versão 1.1** — adiciona autenticação local (PIN + biometria), tema escuro, backup cifrado, validação estruturada de domínio, ErrorBoundary, telas Configurações e Reportar Problema, transações SQLite atômicas.

@@ -1,61 +1,65 @@
 # GarageTrack
 
-> Gestão pessoal de manutenção veicular, offline-first, com biometria e backup criptografado.
+Aplicativo mobile offline-first para gestão de manutenção veicular. O GarageTrack registra histórico, custos, quilometragem, alertas preventivos, oficinas próximas e dados de veículos de forma organizada, funcionando mesmo sem internet e com sincronização opcional na nuvem.
 
-[![CI](https://github.com/Jo0ji1/GarageTrack/actions/workflows/ci.yml/badge.svg)](https://github.com/Jo0ji1/GarageTrack/actions/workflows/ci.yml)
-[![License: MIT](https://img.shields.io/badge/License-MIT-yellow.svg)](garage-track-mobile/LICENSE)
-[![Expo SDK](https://img.shields.io/badge/Expo-SDK%2056-000020?logo=expo)](https://expo.dev)
-[![TypeScript](https://img.shields.io/badge/TypeScript-6.x-3178C6?logo=typescript)](https://www.typescriptlang.org/)
+## Tela inicial
 
-App mobile (Android, em breve iOS) para acompanhar manutenção de carros e motos: registro de serviços, alertas inteligentes, mapa de oficinas próximas via OpenStreetMap, relato rápido de problemas, backup criptografado e bloqueio biométrico.
+![Tela inicial do GarageTrack](docs/images/garage-track-home.svg)
 
-## ✨ Recursos
+## Sobre o projeto
 
-- 🛡️ **Autenticação local**: PIN + biometria, lockout exponencial, auto-lock em background.
-- 🔐 **Backup criptografado**: exporta/importa toda a base com chave derivada via SHA-256.
-- 🏍️ **Veículos múltiplos**: carro e moto no mesmo perfil, troca rápida.
-- 🧾 **Manutenções**: histórico, custo, próxima revisão sugerida por km.
-- 📍 **Oficinas próximas**: busca em tempo real via OpenStreetMap Overpass.
-- 🌗 **Tema claro / escuro / sistema**.
-- 🚨 **Relatar problema**: foto, áudio e descrição direto para uma oficina escolhida.
-- 📴 **Offline-first**: SQLite local + WAL + FTS5.
+O GarageTrack foi desenvolvido para motoristas e motociclistas que precisam acompanhar manutenção preventiva com mais clareza e menos dependência de anotações soltas, planilhas ou memória. O app centraliza veículos, registros de serviço, alertas e custos, com foco em uso rápido no dia a dia e confiabilidade offline.
 
-## 🚀 Comece a usar
+## Tecnologias utilizadas
 
-### Instalar o APK (em breve)
+- Expo SDK 56
+- React Native 0.85
+- React 19
+- TypeScript 6
+- SQLite local com WAL e FTS5
+- Supabase para autenticação e sincronização opcional
+- expo-auth-session e expo-web-browser para login Google
+- expo-location, expo-image-picker, expo-audio, expo-notifications e expo-sharing
+- react-native-maps
+- lucide-react-native
 
-> Link da Release virá aqui assim que o primeiro build EAS for publicado.
+## Integrantes
 
-### Rodar localmente
+- Integrante 1: preencher
+- Integrante 2: preencher
+
+## Funcionalidades principais
+
+- Cadastro e gerenciamento de veículos
+- Registro de manutenções com data, quilometragem, custo, peças, checklist, foto e áudio
+- Histórico pesquisável de serviços
+- Alertas preventivos por tempo e quilometragem
+- Mapa com oficinas próximas
+- Backup cifrado e exportação de dados
+- Conta na nuvem opcional com login por e-mail ou Google
+- Sincronização com fila e comportamento offline-first
+
+## Estrutura resumida do repositório
+
+- `garage-track-mobile/`: aplicativo principal
+- `docs/`: documentação do projeto e materiais acadêmicos
+- `supabase/`: migrações e ajustes do backend opcional
+- `.github/`: automações, templates e prompts internos do repositório
+
+## Instruções básicas de execução
 
 ```powershell
-git clone https://github.com/Jo0ji1/GarageTrack.git
-cd GarageTrack/garage-track-mobile
-npm install --legacy-peer-deps
-npm run dev:android
+cd garage-track-mobile
+npm install
+npx tsc --noEmit
+npm start
 ```
 
-> O script `dev:android` resolve o problema clássico de IPv6 no Metro em Windows + Node 20+ e aplica `adb reverse` automaticamente.
+## Build Android
 
-Detalhes completos em [garage-track-mobile/README.md](garage-track-mobile/README.md).
-
-## 🏗️ Arquitetura
-
-- **Stack**: Expo SDK 56 · React Native 0.85 · React 19 · TypeScript 6
-- **Persistência**: `expo-sqlite` com transações e WAL
-- **Auth**: `expo-local-authentication` + `expo-secure-store` + `expo-crypto`
-- **Mapas**: `react-native-maps` (Google Provider no Android) + Overpass OSM
-- **Notificações**: `expo-notifications` (defensivo no Expo Go)
-
-Documentação completa:
-- [docs/ARCHITECTURE.md](docs/ARCHITECTURE.md)
-- [docs/SECURITY.md](docs/SECURITY.md)
-- [docs/ROADMAP.md](docs/ROADMAP.md)
-- [docs/RUNBOOK.md](docs/RUNBOOK.md)
-- [docs/SUPABASE.md](docs/SUPABASE.md)
-- Entregáveis acadêmicos em [docs/academico/](docs/academico/)
-
-## 🗺️ Roadmap (resumo)
+```powershell
+cd garage-track-mobile
+## Status do projeto
 
 - [x] v1.0 — Núcleo offline (manutenções, alertas, oficinas locais)
 - [x] v1.1 — Auth biométrica, backup criptografado, temas
@@ -64,12 +68,30 @@ Documentação completa:
 - [x] v1.4 — Login Google + APK público via EAS + auto-update OTA
 - [ ] v2.0 — iOS, widgets Android, integração calendário
 
-Veja [docs/ROADMAP.md](docs/ROADMAP.md) para o plano detalhado.
+npm run build:apk
+```
 
-## 🤝 Contribuindo
+## Organização e segurança
 
-Veja [CONTRIBUTING.md](CONTRIBUTING.md). PRs e issues são bem-vindos.
+- Variáveis sensíveis ficam em `garage-track-mobile/.env`, que não é versionado.
+- O modelo para configurar ambiente local está em `garage-track-mobile/.env.example`.
+- Artefatos gerados, como APKs e builds, são ignorados pelo Git.
+- O app mantém a fonte da verdade no SQLite local e usa a nuvem apenas como sincronização opcional.
 
-## 📄 Licença
+## Versionamento
 
-[MIT](garage-track-mobile/LICENSE) © 2026 GarageTrack contributors.
+- Versão atual do app: 1.5.0
+- Changelog: [CHANGELOG.md](CHANGELOG.md)
+
+<<<<<<< HEAD
+- [x] v1.0 — Núcleo offline (manutenções, alertas, oficinas locais)
+- [x] v1.1 — Auth biométrica, backup criptografado, temas
+- [x] v1.2 — Busca real de oficinas via OSM, scripts Windows
+- [x] v1.3 — Conta na nuvem (Supabase) + login e-mail/senha + sync bidirecional
+- [x] v1.4 — Login Google + APK público via EAS + auto-update OTA
+- [ ] v2.0 — iOS, widgets Android, integração calendário
+=======
+## Mais detalhes
+>>>>>>> 3de6570 (docs: padronizar README e imagem inicial do projeto)
+
+Para documentação técnica mais aprofundada, consulte a pasta `docs/` e o README interno do app em `garage-track-mobile/README.md`.
